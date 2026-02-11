@@ -6,7 +6,20 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint . --ext js,ts,tsx --cache",
+    "lint:fix": "eslint . --ext js,ts,tsx --fix --cache && prettier --write .",
+    "lint:ci": "eslint . --ext js,ts,tsx --max-warnings=0 && prettier --check .",
+    "prepare": "husky",
+    "typecheck": "tsc --noEmit"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css,md,json}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
@@ -25,6 +38,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.4.1",
+    "@commitlint/config-conventional": "^20.4.1",
     "@types/node": "^20",
     "@types/pg": "^8.16.0",
     "@types/react": "^19",
@@ -33,6 +48,9 @@
     "dotenv": "^17.2.4",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.8.1",
     "prisma": "^7.3.0",
     "tsx": "^4.21.0",
     "typescript": "^5"
