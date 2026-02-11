@@ -8,9 +8,11 @@ interface MuiThemeProviderProps {
 
 export const MuiThemeProvider: React.FC<MuiThemeProviderProps> = ({ children }) => {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AppRouterCacheProvider>{children}</AppRouterCacheProvider>
-    </ThemeProvider>
+    <AppRouterCacheProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        {children}
+      </ThemeProvider>
+    </AppRouterCacheProvider>
   );
 };

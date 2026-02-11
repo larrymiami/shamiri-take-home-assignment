@@ -1,14 +1,12 @@
-import { Container, Typography } from "@mui/material";
-import prisma from "@/lib/prisma";
+import { redirect } from "next/navigation";
+import { getCurrentSession } from "@/server/auth/session";
 
-export default async function Home() {
-  const supervisors = await prisma.supervisor.findMany();
-  console.log("Supervisors from database:", supervisors);
-  return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Shamiri Take-Home Assignment
-      </Typography>
-    </Container>
-  );
+export default async function HomePage() {
+  const session = await getCurrentSession();
+
+  if (session?.user?.id) {
+    redirect("/dashboard");
+  }
+
+  redirect("/login");
 }
