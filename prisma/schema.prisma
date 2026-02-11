@@ -13,6 +13,13 @@ datasource db {
   provider = "postgresql"
 }
 
+enum SessionStatus {
+  PROCESSED
+  FLAGGED_FOR_REVIEW
+  SAFE
+  RISK
+}
+
 model Supervisor {
   id           String  @id @default(cuid())
   name         String
@@ -20,6 +27,7 @@ model Supervisor {
   passwordHash String?
 
   fellows Fellow[]
+  sessions Session[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -31,9 +39,30 @@ model Fellow {
   name         String
 
   supervisor Supervisor @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+  sessions   Session[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([supervisorId])
+}
+
+model Session {
+  id             String        @id @default(cuid())
+  supervisorId   String
+  fellowId       String
+  groupId        String
+  occurredAt     DateTime
+  transcriptText String
+  finalStatus    SessionStatus?
+
+  supervisor Supervisor @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+  fellow     Fellow     @relation(fields: [fellowId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supervisorId])
+  @@index([fellowId])
+  @@index([occurredAt])
 }
