@@ -1,10 +1,9 @@
+import { cache } from "react";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/server/auth/authOptions";
 
-export async function getCurrentSession() {
-  return getServerSession(authOptions);
-}
+export const getCurrentSession = cache(async () => getServerSession(authOptions));
 
 export async function requireSupervisorSession() {
   const session = await getCurrentSession();
