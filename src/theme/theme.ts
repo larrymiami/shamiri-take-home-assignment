@@ -58,7 +58,7 @@ const theme = createTheme({
 
     text: {
       primary: shamiri.navyBlue,
-      secondary: shamiri.lilacPurple,
+      secondary: "#5f6e9b",
       disabled: shamiri.blueLight
     },
 
@@ -91,7 +91,7 @@ const theme = createTheme({
   },
 
   shape: {
-    borderRadius: 12
+    borderRadius: 4
   },
 
   components: {
