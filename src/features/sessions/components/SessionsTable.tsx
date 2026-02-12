@@ -22,8 +22,8 @@ import {
   Typography
 } from "@mui/material";
 import type { SessionStatus } from "@/server/types/domain";
-import type { SessionListItem, SessionStatusFilter } from "@/server/types/sessions";
-import { SessionStatusChip } from "@/components/sessions/SessionStatusChip";
+import type { SessionListItem, SessionStatusFilter } from "@/features/sessions/types";
+import { SessionStatusChip } from "@/features/sessions/components/SessionStatusChip";
 
 interface SessionsTableProps {
   sessions: SessionListItem[];
@@ -38,14 +38,19 @@ function formatDate(occurredAtIso: string): string {
   return dayjs(occurredAtIso).format("MMM D, YYYY h:mm A");
 }
 
+function formatDateMobile(occurredAtIso: string): string {
+  return dayjs(occurredAtIso).format("MMM D, YYYY");
+}
+
 function actionStyles(status: SessionStatus) {
-  if (status === "RISK") {
+  if (status === "RISK" || status === "FLAGGED_FOR_REVIEW") {
     return {
       variant: "contained" as const,
       label: "Review",
       sx: {
-        backgroundColor: "#10275b",
-        "&:hover": { backgroundColor: "#0b1c43" }
+        backgroundColor: "secondary.main",
+        color: "common.white",
+        "&:hover": { backgroundColor: "secondary.dark" }
       }
     };
   }
@@ -55,10 +60,13 @@ function actionStyles(status: SessionStatus) {
       variant: "outlined" as const,
       label: "Review",
       sx: {
-        borderColor: "#c9d7a5",
-        color: "#2d4a12",
-        backgroundColor: "#f8fce8",
-        "&:hover": { backgroundColor: "#eef7ce", borderColor: "#b8cf73" }
+        borderColor: "var(--shamiri-border-green)",
+        color: "success.main",
+        backgroundColor: "var(--shamiri-light-green)",
+        "&:hover": {
+          backgroundColor: "var(--shamiri-light-green)",
+          borderColor: "success.main"
+        }
       }
     };
   }
@@ -68,10 +76,13 @@ function actionStyles(status: SessionStatus) {
       variant: "outlined" as const,
       label: "View",
       sx: {
-        borderColor: "#dde2f0",
-        color: "#8a94b3",
-        backgroundColor: "#f9fafe",
-        "&:hover": { borderColor: "#c8d1e7", backgroundColor: "#f4f7ff" }
+        borderColor: "divider",
+        color: "text.secondary",
+        backgroundColor: "var(--shamiri-background-secondary)",
+        "&:hover": {
+          borderColor: "divider",
+          backgroundColor: "var(--shamiri-background-secondary)"
+        }
       }
     };
   }
@@ -80,8 +91,9 @@ function actionStyles(status: SessionStatus) {
     variant: "contained" as const,
     label: "Review",
     sx: {
-      backgroundColor: "primary.main",
-      "&:hover": { backgroundColor: "#0e2244" }
+      backgroundColor: "secondary.main",
+      color: "common.white",
+      "&:hover": { backgroundColor: "secondary.dark" }
     }
   };
 }
@@ -142,7 +154,7 @@ export function SessionsTable({
                   slotProps={{
                     input: {
                       startAdornment: (
-                        <InputAdornment position="start">
+                        <InputAdornment key="search-start-adornment" position="start">
                           <SearchOutlinedIcon fontSize="small" color="disabled" />
                         </InputAdornment>
                       )
@@ -170,7 +182,7 @@ export function SessionsTable({
             </Box>
           </Stack>
 
-          <Box sx={{ overflowX: "auto" }}>
+          <Box sx={{ display: { xs: "none", md: "block" }, overflowX: "auto" }}>
             <Table size="medium" aria-label="Completed sessions table">
               <TableHead>
                 <TableRow>
@@ -246,6 +258,76 @@ export function SessionsTable({
             </Table>
           </Box>
 
+          <Stack spacing={1.5} sx={{ display: { xs: "flex", md: "none" } }}>
+            {sessions.map((session) => {
+              const action = actionStyles(session.displayStatus);
+              const actionButton = (
+                <Button variant={action.variant} fullWidth sx={{ fontWeight: 800, ...action.sx }}>
+                  {action.label}
+                </Button>
+              );
+
+              return (
+                <Card
+                  key={session.id}
+                  sx={{ borderRadius: 2, borderColor: "divider", backgroundColor: "common.white" }}
+                >
+                  <CardContent sx={{ p: 1.75 }}>
+                    <Stack spacing={1.5}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                        <Stack spacing={0.25}>
+                          <Typography sx={{ fontWeight: 800 }}>{session.fellowName}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Tier 1 Fellow
+                          </Typography>
+                        </Stack>
+                        <SessionStatusChip status={session.displayStatus} />
+                      </Stack>
+
+                      <Stack direction="row" spacing={3}>
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              textTransform: "uppercase",
+                              color: "text.disabled",
+                              fontWeight: 800
+                            }}
+                          >
+                            Date
+                          </Typography>
+                          <Typography sx={{ fontWeight: 700 }}>
+                            {formatDateMobile(session.occurredAt)}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              textTransform: "uppercase",
+                              color: "text.disabled",
+                              fontWeight: 800
+                            }}
+                          >
+                            Group ID
+                          </Typography>
+                          <Typography sx={{ fontWeight: 700 }}>{session.groupId}</Typography>
+                        </Box>
+                      </Stack>
+
+                      <Link
+                        href={`/sessions/${session.id}`}
+                        style={{ textDecoration: "none", display: "inline-block", width: "100%" }}
+                      >
+                        {actionButton}
+                      </Link>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </Stack>
+
           <Stack spacing={1} alignItems="center">
             <Pagination
               count={totalPages}
@@ -254,6 +336,7 @@ export function SessionsTable({
               shape="rounded"
               siblingCount={1}
               boundaryCount={1}
+              size="small"
               renderItem={(item) => {
                 const targetPage = item.page ?? 1;
                 return (

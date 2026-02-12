@@ -32,7 +32,7 @@ export function SessionStatusChip({ status }: SessionStatusChipProps) {
         size="small"
         label={statusLabel[status]}
         sx={{
-          backgroundColor: "#9a8ee6",
+          backgroundColor: "warning.main",
           color: "common.white"
         }}
       />
@@ -46,9 +46,9 @@ export function SessionStatusChip({ status }: SessionStatusChipProps) {
         size="small"
         label={statusLabel[status]}
         sx={{
-          borderColor: "secondary.main",
-          color: "primary.main",
-          backgroundColor: "#f1fbd1"
+          borderColor: "var(--shamiri-border-green)",
+          color: "success.main",
+          backgroundColor: "var(--shamiri-light-green)"
         }}
       />
     );
@@ -60,9 +60,9 @@ export function SessionStatusChip({ status }: SessionStatusChipProps) {
       size="small"
       label={statusLabel[status]}
       sx={{
-        borderColor: "#d7dced",
-        backgroundColor: "#f4f6fb",
-        color: "#8892b0"
+        borderColor: "divider",
+        backgroundColor: "var(--shamiri-background-secondary)",
+        color: "text.secondary"
       }}
     />
   );

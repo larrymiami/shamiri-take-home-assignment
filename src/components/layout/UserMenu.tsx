@@ -36,7 +36,7 @@ export function UserMenu({ name, email }: UserMenuProps) {
         aria-haspopup="menu"
         aria-expanded={isOpen ? "true" : undefined}
         aria-label="Open account menu"
-        sx={{ p: 0.25 }}
+        sx={{ p: 0.25, border: "1px solid", borderColor: "divider" }}
       >
         <Avatar sx={{ width: 34, height: 34, bgcolor: "#d9dded", color: "primary.main" }}>
           {name.charAt(0)}

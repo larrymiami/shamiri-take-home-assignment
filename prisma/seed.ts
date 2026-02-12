@@ -1,7 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import dayjs from "dayjs";
-import { PrismaClient, SessionStatus } from "../_app/generated/prisma/client";
+import { PrismaClient, SessionStatus } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { getDatabaseUrlFromEnv } from "../src/server/db/connectionString";
 

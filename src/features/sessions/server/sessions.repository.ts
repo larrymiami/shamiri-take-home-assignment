@@ -1,19 +1,33 @@
 import dayjs from "dayjs";
 import type {
-  Prisma,
-  SessionStatus as PrismaSessionStatus
-} from "../../../_app/generated/prisma/client";
+  SessionListItem,
+  SessionListQuery,
+  SessionListResult
+} from "@/features/sessions/types";
 import prisma from "@/server/db/prisma";
 import type { SessionStatus } from "@/server/types/domain";
-import type { SessionListQuery, SessionListResult } from "@/server/types/sessions";
 
-function deriveDisplayStatus(finalStatus: PrismaSessionStatus | null): SessionStatus {
+type SessionFindManyArgs = NonNullable<Parameters<typeof prisma.session.findMany>[0]>;
+type SessionWhereInput = NonNullable<SessionFindManyArgs["where"]>;
+type SessionListRow = {
+  id: string;
+  groupId: string;
+  occurredAt: Date;
+  finalStatus: SessionStatus | null;
+  fellow: {
+    name: string;
+  };
+};
+type SessionMetricRow = {
+  occurredAt: Date;
+  finalStatus: SessionStatus | null;
+};
+
+function deriveDisplayStatus(finalStatus: SessionStatus | null): SessionStatus {
   return finalStatus ?? "PROCESSED";
 }
 
-function buildStatusWhere(
-  status: SessionListQuery["status"]
-): Prisma.SessionWhereInput | undefined {
+function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput | undefined {
   if (status === "ALL") {
     return undefined;
   }
@@ -27,7 +41,7 @@ function buildStatusWhere(
   return { finalStatus: status };
 }
 
-function buildSearchWhere(search: string): Prisma.SessionWhereInput | undefined {
+function buildSearchWhere(search: string): SessionWhereInput | undefined {
   const term = search.trim();
 
   if (!term) {
@@ -42,9 +56,9 @@ function buildSearchWhere(search: string): Prisma.SessionWhereInput | undefined 
   };
 }
 
-function buildListWhere(supervisorId: string, query: SessionListQuery): Prisma.SessionWhereInput {
-  const where: Prisma.SessionWhereInput = { supervisorId };
-  const conditions: Prisma.SessionWhereInput[] = [];
+function buildListWhere(supervisorId: string, query: SessionListQuery): SessionWhereInput {
+  const where: SessionWhereInput = { supervisorId };
+  const conditions: SessionWhereInput[] = [];
   const statusWhere = buildStatusWhere(query.status);
   const searchWhere = buildSearchWhere(query.search);
 
@@ -71,35 +85,41 @@ export async function listForSupervisor(
   const safePageSize = Math.max(1, query.pageSize);
   const where = buildListWhere(supervisorId, query);
 
-  const [sessions, totalCount] = await prisma.$transaction([
-    prisma.session.findMany({
-      where,
-      orderBy: { occurredAt: "desc" },
-      skip: (safePage - 1) * safePageSize,
-      take: safePageSize,
-      select: {
-        id: true,
-        groupId: true,
-        occurredAt: true,
-        finalStatus: true,
-        fellow: {
-          select: {
-            name: true
-          }
+  const sessionsPromise = prisma.session.findMany({
+    where,
+    orderBy: { occurredAt: "desc" },
+    skip: (safePage - 1) * safePageSize,
+    take: safePageSize,
+    select: {
+      id: true,
+      groupId: true,
+      occurredAt: true,
+      finalStatus: true,
+      fellow: {
+        select: {
+          name: true
         }
       }
-    }),
-    prisma.session.count({ where })
+    }
+  }) as Promise<SessionListRow[]>;
+
+  const totalCountPromise = prisma.session.count({ where });
+
+  const [sessions, totalCount]: [SessionListRow[], number] = await Promise.all([
+    sessionsPromise,
+    totalCountPromise
   ]);
 
   return {
-    items: sessions.map((session) => ({
-      id: session.id,
-      fellowName: session.fellow.name,
-      occurredAt: session.occurredAt.toISOString(),
-      groupId: session.groupId,
-      displayStatus: deriveDisplayStatus(session.finalStatus)
-    })),
+    items: sessions.map(
+      (session: SessionListRow): SessionListItem => ({
+        id: session.id,
+        fellowName: session.fellow.name,
+        occurredAt: session.occurredAt.toISOString(),
+        groupId: session.groupId,
+        displayStatus: deriveDisplayStatus(session.finalStatus)
+      })
+    ),
     page: safePage,
     pageSize: safePageSize,
     totalCount
@@ -112,13 +132,13 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
   reviewedToday: number;
   todayTotal: number;
 }> {
-  const sessions = await prisma.session.findMany({
+  const sessions: SessionMetricRow[] = (await prisma.session.findMany({
     where: { supervisorId },
     select: {
       occurredAt: true,
       finalStatus: true
     }
-  });
+  })) as SessionMetricRow[];
 
   let riskCount = 0;
   let sessionsNeedingReview = 0;
