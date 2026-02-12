@@ -3,8 +3,8 @@ import { Card, CardContent, Stack, Typography } from "@mui/material";
 
 interface MetricCardProps {
   title: string;
-  value: string;
-  subtitle?: string;
+  value: ReactNode;
+  subtitle?: ReactNode;
   icon?: ReactNode;
   emphasized?: boolean;
 }
@@ -13,8 +13,8 @@ export function MetricCard({ title, value, subtitle, icon, emphasized = false }:
   return (
     <Card
       sx={{
-        backgroundColor: emphasized ? "#fff6f6" : "common.white",
-        borderColor: emphasized ? "#f2caca" : "divider"
+        backgroundColor: emphasized ? "var(--shamiri-red-bg)" : "common.white",
+        borderColor: emphasized ? "var(--shamiri-red-border)" : "divider"
       }}
     >
       <CardContent sx={{ p: 2.5 }}>
@@ -32,6 +32,7 @@ export function MetricCard({ title, value, subtitle, icon, emphasized = false }:
           </Typography>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography
+              component="div"
               sx={{
                 fontSize: 44,
                 lineHeight: 1,
@@ -44,7 +45,11 @@ export function MetricCard({ title, value, subtitle, icon, emphasized = false }:
             {icon}
           </Stack>
           {subtitle ? (
-            <Typography color="text.secondary" sx={{ fontSize: 13, fontWeight: 600 }}>
+            <Typography
+              component="div"
+              color="text.secondary"
+              sx={{ fontSize: 13, fontWeight: 600 }}
+            >
               {subtitle}
             </Typography>
           ) : null}

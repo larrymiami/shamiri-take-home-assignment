@@ -1,13 +1,7 @@
 import Image from "next/image";
-import { AppBar, Box, Stack, Toolbar, Typography } from "@mui/material";
-import { UserMenu } from "@/components/layout/UserMenu";
+import { AppBar, Box, Skeleton, Stack, Toolbar, Typography } from "@mui/material";
 
-interface TopBarProps {
-  name: string;
-  email: string;
-}
-
-export function TopBar({ name, email }: TopBarProps) {
+export function TopBarSkeleton() {
   return (
     <AppBar
       position="static"
@@ -28,14 +22,11 @@ export function TopBar({ name, email }: TopBarProps) {
           display: "flex",
           alignItems: { xs: "flex-start", md: "center" },
           justifyContent: "space-between",
-          gap: 2
+          gap: 2,
+          flexDirection: { xs: "column", md: "row" }
         }}
       >
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          alignItems={{ xs: "flex-start", md: "center" }}
-          spacing={1}
-        >
+        <Stack direction="row" alignItems="center" spacing={1}>
           <Box sx={{ width: 92, height: 24, position: "relative" }}>
             <Image
               src="/Shamiri%20Wordmark%20-%20Color%20Version.png"
@@ -58,7 +49,13 @@ export function TopBar({ name, email }: TopBarProps) {
           </Typography>
         </Stack>
 
-        <UserMenu name={name} email={email} />
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          <Box sx={{ textAlign: "right" }}>
+            <Skeleton variant="text" width={124} sx={{ transform: "none", ml: "auto" }} />
+            <Skeleton variant="text" width={162} sx={{ transform: "none", ml: "auto" }} />
+          </Box>
+          <Skeleton variant="circular" width={34} height={34} />
+        </Stack>
       </Toolbar>
     </AppBar>
   );
