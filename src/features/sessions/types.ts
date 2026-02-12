@@ -1,4 +1,4 @@
-import type { SessionStatus } from "@/server/types/domain";
+import type { ReviewDecision, SessionStatus } from "@/server/types/domain";
 
 export interface SessionListItem {
   id: string;
@@ -22,4 +22,61 @@ export interface SessionListResult {
   page: number;
   pageSize: number;
   totalCount: number;
+}
+
+export type SafetyFlag = "SAFE" | "RISK";
+
+export type ContentCoverageRating = "MISSED" | "PARTIAL" | "COMPLETE";
+export type FacilitationQualityRating = "POOR" | "ADEQUATE" | "EXCELLENT";
+export type ProtocolSafetyRating = "VIOLATION" | "MINOR_DRIFT" | "ADHERENT";
+
+export type MetricScore = 1 | 2 | 3;
+
+export interface ScoredMetricDTO<TRating extends string> {
+  score: MetricScore;
+  rating: TRating;
+  justification: string;
+  evidenceQuotes: string[];
+}
+
+export interface SessionAnalysisMetaDTO {
+  model: string;
+  promptVersion: string;
+  generatedAt: string;
+  latencyMs?: number;
+}
+
+export interface SessionAnalysisDTO {
+  sessionSummary: string;
+  contentCoverage: ScoredMetricDTO<ContentCoverageRating>;
+  facilitationQuality: ScoredMetricDTO<FacilitationQualityRating>;
+  protocolSafety: ScoredMetricDTO<ProtocolSafetyRating>;
+  riskDetection: {
+    flag: SafetyFlag;
+    rationale: string;
+    extractedQuotes: string[];
+  };
+  meta: SessionAnalysisMetaDTO;
+}
+
+export interface SessionDetailDTO {
+  id: string;
+  fellowName: string;
+  occurredAt: string;
+  groupId: string;
+  transcriptText: string;
+  finalStatus?: SessionStatus | null;
+  analysis?: SessionAnalysisDTO;
+  review?: {
+    decision: ReviewDecision;
+    finalStatus: SessionStatus;
+    note: string;
+    updatedAt: string;
+  };
+}
+
+export interface SupervisorReviewInput {
+  decision: ReviewDecision;
+  finalStatus: SessionStatus;
+  note: string;
 }
