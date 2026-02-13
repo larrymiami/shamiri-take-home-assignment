@@ -23,9 +23,9 @@ const shamiri = {
   successBg: "#e5f8eb",
   successBorder: "#ccf1d6",
 
-  danger: "#de5e68",
-  dangerBg: "hsla(0, 100%, 62%, 0.1)",
-  dangerBorder: "hsl(359, 85%, 90%)",
+  danger: "#e92c2c",
+  dangerBg: "rgba(233, 44, 44, 0.12)",
+  dangerBorder: "#f4c8c8",
 
   warning: "#f98600"
 };
@@ -118,6 +118,8 @@ const theme = createTheme({
       styleOverrides: {
         ":root": {
           "--shamiri-background-secondary": shamiri.surfaceMuted,
+          "--shamiri-brand-light-blue": shamiri.brandLightBlue,
+          "--shamiri-brand-lighter-blue": shamiri.brandLighterBlue,
           "--shamiri-light-green": shamiri.successBg,
           "--shamiri-border-green": shamiri.successBorder,
           "--shamiri-red-bg": shamiri.dangerBg,

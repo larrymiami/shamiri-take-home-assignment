@@ -222,9 +222,6 @@ export function SessionsTable({
                       <TableCell>
                         <Stack spacing={0.25}>
                           <Typography sx={{ fontWeight: 700 }}>{session.fellowName}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Tier 1 Fellow
-                          </Typography>
                         </Stack>
                       </TableCell>
                       <TableCell sx={{ whiteSpace: "nowrap" }}>
@@ -278,7 +275,7 @@ export function SessionsTable({
                         <Stack spacing={0.25}>
                           <Typography sx={{ fontWeight: 800 }}>{session.fellowName}</Typography>
                           <Typography variant="caption" color="text.secondary">
-                            Tier 1 Fellow
+                            Fellow
                           </Typography>
                         </Stack>
                         <SessionStatusChip status={session.displayStatus} />
