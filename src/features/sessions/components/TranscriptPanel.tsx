@@ -17,6 +17,7 @@ interface TranscriptEntry {
 
 const TURN_SECONDS = 22;
 const DOWNLOAD_FILE_NAME = "session-transcript.csv";
+const CSV_FORMULA_PREFIX_PATTERN = /^[\s]*[=+\-@]/;
 
 function normalizeText(value: string): string {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
@@ -130,10 +131,20 @@ function escapeCsvValue(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;
 }
 
+function sanitizeCsvCell(value: string): string {
+  if (!CSV_FORMULA_PREFIX_PATTERN.test(value)) {
+    return value;
+  }
+
+  // Prevent spreadsheet apps from treating user-controlled cells as formulas.
+  return `'${value}`;
+}
+
 function buildTranscriptCsv(entries: TranscriptEntry[]): string {
   const header = ["Timestamp", "Speaker", "Text"].join(",");
   const rows = entries.map((entry) =>
     [entry.timestampLabel, entry.speaker, entry.content]
+      .map((value) => sanitizeCsvCell(value))
       .map((value) => escapeCsvValue(value))
       .join(",")
   );
