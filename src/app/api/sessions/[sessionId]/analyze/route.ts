@@ -58,7 +58,13 @@ export async function POST(_request: Request, context: AnalyzeRouteContext) {
       return NextResponse.json({ error: error.message }, { status: 422 });
     }
 
-    console.error("Failed to analyze session", error);
+    console.error("Failed to analyze session", {
+      sessionId,
+      supervisorId: authSession.user.id,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+      errorMessage: error instanceof Error ? error.message : "Unknown error"
+    });
+
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

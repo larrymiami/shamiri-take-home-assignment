@@ -44,6 +44,10 @@ export interface SessionAnalysisMetaDTO {
   promptVersion: string;
   generatedAt: string;
   latencyMs?: number;
+  transcriptCharsSent?: number;
+  transcriptWasTruncated?: boolean;
+  transcriptWindowCount?: number;
+  transcriptRiskLinesIncluded?: number;
 }
 
 export interface SessionAnalysisDTO {

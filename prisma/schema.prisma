@@ -89,6 +89,8 @@ model AIAnalysis {
   model         String
   promptVersion String
   latencyMs     Int?
+  transcriptCharsSent Int?
+  transcriptWasTruncated Boolean?
   createdAt     DateTime   @default(now())
 
   session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)

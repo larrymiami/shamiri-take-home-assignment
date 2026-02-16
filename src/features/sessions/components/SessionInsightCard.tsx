@@ -5,17 +5,26 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Alert, Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
 import type { SessionAnalysisDTO } from "@/features/sessions/types";
+import type { SessionStatus } from "@/server/types/domain";
 
 interface SessionInsightCardProps {
   sessionId: string;
   analysis?: SessionAnalysisDTO;
+  finalStatus?: SessionStatus | null;
+  hasReview?: boolean;
 }
 
-export function SessionInsightCard({ sessionId, analysis }: SessionInsightCardProps) {
+export function SessionInsightCard({
+  sessionId,
+  analysis,
+  finalStatus,
+  hasReview = false
+}: SessionInsightCardProps) {
   const router = useRouter();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const hasHumanStatus = Boolean(finalStatus || hasReview);
 
   const handleAnalyze = async () => {
     setErrorMessage(null);
@@ -54,7 +63,9 @@ export function SessionInsightCard({ sessionId, analysis }: SessionInsightCardPr
               </Typography>
             </Stack>
             <Alert severity="info" sx={{ borderRadius: 2 }}>
-              No AI analysis is available for this session yet.
+              {hasHumanStatus
+                ? "Session status is currently based on supervisor review/final status. AI analysis is not available yet."
+                : "No AI analysis is available for this session yet."}
             </Alert>
             {errorMessage ? (
               <Alert severity="error" sx={{ borderRadius: 2 }}>

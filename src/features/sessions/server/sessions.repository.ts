@@ -34,6 +34,9 @@ type SessionMetricRow = {
   analysis: {
     safetyFlag: "SAFE" | "RISK";
   } | null;
+  review: {
+    id: string;
+  } | null;
 };
 
 function parseStoredAnalysis(resultJson: unknown): SessionAnalysisDTO | null {
@@ -186,6 +189,11 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
     select: {
       occurredAt: true,
       finalStatus: true,
+      review: {
+        select: {
+          id: true
+        }
+      },
       analysis: {
         select: {
           safetyFlag: true
@@ -215,7 +223,7 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
 
     if (dayjs(session.occurredAt).isSame(dayjs(), "day")) {
       todayTotal += 1;
-      if (status !== "PROCESSED") {
+      if (session.review !== null) {
         reviewedToday += 1;
       }
     }
@@ -284,7 +292,9 @@ export async function upsertSessionAnalysis(
       riskQuotes: analysis.riskDetection.extractedQuotes,
       model: analysis.meta.model,
       promptVersion: analysis.meta.promptVersion,
-      latencyMs: analysis.meta.latencyMs
+      latencyMs: analysis.meta.latencyMs,
+      transcriptCharsSent: analysis.meta.transcriptCharsSent,
+      transcriptWasTruncated: analysis.meta.transcriptWasTruncated
     },
     update: {
       resultJson: analysis as unknown as AnalysisResultJsonInput,
@@ -292,7 +302,9 @@ export async function upsertSessionAnalysis(
       riskQuotes: analysis.riskDetection.extractedQuotes,
       model: analysis.meta.model,
       promptVersion: analysis.meta.promptVersion,
-      latencyMs: analysis.meta.latencyMs
+      latencyMs: analysis.meta.latencyMs,
+      transcriptCharsSent: analysis.meta.transcriptCharsSent,
+      transcriptWasTruncated: analysis.meta.transcriptWasTruncated
     },
     select: {
       resultJson: true
