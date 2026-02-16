@@ -20,15 +20,23 @@ import type { ReviewDecision, SessionStatus } from "@/server/types/domain";
 interface ReviewPanelProps {
   sessionId: string;
   currentStatus: SessionStatus;
+  hasAnalysis?: boolean;
   existingReview?: SessionDetailDTO["review"];
 }
 
 const ALL_STATUS_OPTIONS: SessionStatus[] = ["PROCESSED", "SAFE", "FLAGGED_FOR_REVIEW", "RISK"];
 
-export function ReviewPanel({ sessionId, currentStatus, existingReview }: ReviewPanelProps) {
+export function ReviewPanel({
+  sessionId,
+  currentStatus,
+  hasAnalysis = false,
+  existingReview
+}: ReviewPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [decision, setDecision] = useState<ReviewDecision>(existingReview?.decision ?? "VALIDATED");
+  const [decision, setDecision] = useState<ReviewDecision>(
+    existingReview?.decision ?? (hasAnalysis ? "VALIDATED" : "OVERRIDDEN")
+  );
   const [finalStatus, setFinalStatus] = useState<SessionStatus>(
     existingReview?.finalStatus ?? currentStatus
   );
@@ -37,6 +45,13 @@ export function ReviewPanel({ sessionId, currentStatus, existingReview }: Review
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const requiresNote = decision === "REJECTED" || decision === "OVERRIDDEN";
+  const decisionOptions: Array<{ value: ReviewDecision; label: string }> = hasAnalysis
+    ? [
+        { value: "VALIDATED", label: "Validate AI Analysis" },
+        { value: "REJECTED", label: "Reject AI Analysis" },
+        { value: "OVERRIDDEN", label: "Override AI Status" }
+      ]
+    : [{ value: "OVERRIDDEN", label: "Set Final Status Manually" }];
   const statusOptions = useMemo(() => {
     const ordered = [currentStatus, ...ALL_STATUS_OPTIONS];
     return Array.from(new Set(ordered));
@@ -109,14 +124,23 @@ export function ReviewPanel({ sessionId, currentStatus, existingReview }: Review
             }}
             size="small"
           >
-            <MenuItem value="VALIDATED">Validate AI Analysis</MenuItem>
-            <MenuItem value="REJECTED">Reject AI Analysis</MenuItem>
-            <MenuItem value="OVERRIDDEN">Override AI Status</MenuItem>
+            {decisionOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
           </TextField>
+
+          {!hasAnalysis ? (
+            <Alert severity="info" sx={{ borderRadius: 2 }}>
+              AI analysis has not been generated yet. You can still set a supervisor final status
+              manually.
+            </Alert>
+          ) : null}
 
           <TextField
             select
-            label="Override AI Status"
+            label={hasAnalysis ? "Override AI Status" : "Set Final Status"}
             value={finalStatus}
             onChange={(event) => {
               setFinalStatus(event.target.value as SessionStatus);
@@ -125,7 +149,11 @@ export function ReviewPanel({ sessionId, currentStatus, existingReview }: Review
           >
             {statusOptions.map((status) => (
               <MenuItem key={status} value={status}>
-                {status === currentStatus ? `Maintain AI Recommendation (${status})` : status}
+                {status === currentStatus
+                  ? hasAnalysis
+                    ? `Maintain AI Recommendation (${status})`
+                    : `Maintain Current Status (${status})`
+                  : status}
               </MenuItem>
             ))}
           </TextField>

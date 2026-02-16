@@ -117,7 +117,12 @@ export function SessionDetailView({ session }: SessionDetailViewProps) {
       <Grid size={{ xs: 12, lg: 4 }}>
         <Box sx={{ position: { lg: "sticky" }, top: { lg: 84 } }}>
           <Stack spacing={1.5}>
-            <SessionInsightCard sessionId={session.id} analysis={session.analysis} />
+            <SessionInsightCard
+              sessionId={session.id}
+              analysis={session.analysis}
+              finalStatus={session.finalStatus}
+              hasReview={Boolean(session.review)}
+            />
             {session.analysis ? (
               <RiskBanner
                 flag={session.analysis.riskDetection.flag}
@@ -135,6 +140,7 @@ export function SessionDetailView({ session }: SessionDetailViewProps) {
             <ReviewPanel
               sessionId={session.id}
               currentStatus={displayStatus}
+              hasAnalysis={Boolean(session.analysis)}
               existingReview={session.review}
             />
             <Typography
