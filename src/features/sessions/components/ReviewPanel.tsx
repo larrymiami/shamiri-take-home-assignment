@@ -26,6 +26,21 @@ interface ReviewPanelProps {
 
 const ALL_STATUS_OPTIONS: SessionStatus[] = ["PROCESSED", "SAFE", "FLAGGED_FOR_REVIEW", "RISK"];
 
+function normalizeReviewDecision(
+  decision: ReviewDecision | undefined,
+  hasAnalysis: boolean
+): ReviewDecision {
+  if (!decision) {
+    return hasAnalysis ? "VALIDATED" : "OVERRIDDEN";
+  }
+
+  if (!hasAnalysis && decision !== "OVERRIDDEN") {
+    return "OVERRIDDEN";
+  }
+
+  return decision;
+}
+
 export function ReviewPanel({
   sessionId,
   currentStatus,
@@ -35,7 +50,7 @@ export function ReviewPanel({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [decision, setDecision] = useState<ReviewDecision>(
-    existingReview?.decision ?? (hasAnalysis ? "VALIDATED" : "OVERRIDDEN")
+    normalizeReviewDecision(existingReview?.decision, hasAnalysis)
   );
   const [finalStatus, setFinalStatus] = useState<SessionStatus>(
     existingReview?.finalStatus ?? currentStatus
@@ -44,7 +59,8 @@ export function ReviewPanel({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const requiresNote = decision === "REJECTED" || decision === "OVERRIDDEN";
+  const effectiveDecision = hasAnalysis ? decision : "OVERRIDDEN";
+  const requiresNote = effectiveDecision === "REJECTED" || effectiveDecision === "OVERRIDDEN";
   const decisionOptions: Array<{ value: ReviewDecision; label: string }> = hasAnalysis
     ? [
         { value: "VALIDATED", label: "Validate AI Analysis" },
@@ -77,7 +93,7 @@ export function ReviewPanel({
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            decision,
+            decision: effectiveDecision,
             finalStatus,
             note: trimmedNote
           })

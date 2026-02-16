@@ -34,6 +34,9 @@ type SessionMetricRow = {
   analysis: {
     safetyFlag: "SAFE" | "RISK";
   } | null;
+  review: {
+    id: string;
+  } | null;
 };
 
 function parseStoredAnalysis(resultJson: unknown): SessionAnalysisDTO | null {
@@ -186,6 +189,11 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
     select: {
       occurredAt: true,
       finalStatus: true,
+      review: {
+        select: {
+          id: true
+        }
+      },
       analysis: {
         select: {
           safetyFlag: true
@@ -215,7 +223,7 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
 
     if (dayjs(session.occurredAt).isSame(dayjs(), "day")) {
       todayTotal += 1;
-      if (session.finalStatus !== null) {
+      if (session.review !== null) {
         reviewedToday += 1;
       }
     }
