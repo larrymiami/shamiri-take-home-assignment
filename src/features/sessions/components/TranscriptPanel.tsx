@@ -5,6 +5,8 @@ import ExpandLessRoundedIcon from "@mui/icons-material/ExpandLessRounded";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import SubjectRoundedIcon from "@mui/icons-material/SubjectRounded";
 import { useEffect, useState } from "react";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import {
   Box,
   Button,
@@ -167,6 +169,8 @@ function buildTranscriptCsv(entries: TranscriptEntry[]): string {
 }
 
 export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: TranscriptPanelProps) {
+  const theme = useTheme();
+  const isDesktopViewport = useMediaQuery(theme.breakpoints.up("md"), { noSsr: true });
   const entries = buildTranscriptEntries(transcriptText, highlightedQuotes);
   const csvContent = buildTranscriptCsv(entries);
   const downloadHref = `data:text/csv;charset=utf-8,${encodeURIComponent(csvContent)}`;
@@ -187,7 +191,7 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
     };
   }, []);
 
-  const transcriptRows = (
+  const renderTranscriptRows = () => (
     <Stack sx={{ maxHeight: { xs: "none", lg: "calc(100vh - 280px)" }, overflowY: "auto" }}>
       {entries.map((entry) => (
         <Box
@@ -336,11 +340,13 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
           </Button>
         </Stack>
 
-        <Collapse in={isMobileTranscriptOpen} sx={{ display: { xs: "block", md: "none" } }}>
-          {transcriptRows}
-        </Collapse>
-
-        <Box sx={{ display: { xs: "none", md: "block" } }}>{transcriptRows}</Box>
+        {isDesktopViewport ? (
+          <Box>{renderTranscriptRows()}</Box>
+        ) : (
+          <Collapse in={isMobileTranscriptOpen} unmountOnExit>
+            {renderTranscriptRows()}
+          </Collapse>
+        )}
       </CardContent>
     </Card>
   );

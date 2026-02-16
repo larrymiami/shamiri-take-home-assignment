@@ -1,4 +1,4 @@
-export const PROMPT_VERSION = "session-analysis-v1";
+export const PROMPT_VERSION = "session-analysis-v2";
 export const SESSION_ANALYSIS_MODEL = "gpt-4o-mini";
 
 const MAX_TRANSCRIPT_CHARS = 22000;
