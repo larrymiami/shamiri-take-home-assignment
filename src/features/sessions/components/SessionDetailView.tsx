@@ -1,10 +1,11 @@
 import Link from "next/link";
 import dayjs from "dayjs";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
+import ArrowDownwardRoundedIcon from "@mui/icons-material/ArrowDownwardRounded";
 import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
 import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
 import NavigateNextRoundedIcon from "@mui/icons-material/NavigateNextRounded";
-import { Box, Breadcrumbs, Chip, Grid, Stack, Typography } from "@mui/material";
+import { Box, Breadcrumbs, Button, Chip, Grid, Stack, Typography } from "@mui/material";
 import { ReviewPanel } from "@/features/sessions/components/ReviewPanel";
 import { RiskBanner } from "@/features/sessions/components/RiskBanner";
 import { SessionInsightCard } from "@/features/sessions/components/SessionInsightCard";
@@ -33,7 +34,7 @@ export function SessionDetailView({ session }: SessionDetailViewProps) {
 
   return (
     <Grid container spacing={2.5} alignItems="flex-start">
-      <Grid size={{ xs: 12, lg: 8 }}>
+      <Grid size={{ xs: 12, lg: 8 }} sx={{ order: { xs: 2, lg: 1 } }}>
         <Stack spacing={1.5}>
           <Stack spacing={0.8}>
             <Breadcrumbs
@@ -107,16 +108,31 @@ export function SessionDetailView({ session }: SessionDetailViewProps) {
             />
           </Stack>
 
-          <TranscriptPanel
-            transcriptText={session.transcriptText}
-            highlightedQuotes={session.analysis?.riskDetection.extractedQuotes}
-          />
+          <Box id="transcript-panel" sx={{ scrollMarginTop: { xs: 72, lg: 92 } }}>
+            <TranscriptPanel
+              transcriptText={session.transcriptText}
+              highlightedQuotes={session.analysis?.riskDetection.extractedQuotes}
+            />
+          </Box>
         </Stack>
       </Grid>
 
-      <Grid size={{ xs: 12, lg: 4 }}>
+      <Grid size={{ xs: 12, lg: 4 }} sx={{ order: { xs: 1, lg: 2 } }}>
         <Box sx={{ position: { lg: "sticky" }, top: { lg: 84 } }}>
           <Stack spacing={1.5}>
+            <Button
+              href="#transcript-panel"
+              variant="outlined"
+              size="small"
+              startIcon={<ArrowDownwardRoundedIcon />}
+              sx={{
+                alignSelf: "flex-start",
+                textTransform: "none",
+                display: { xs: "inline-flex", lg: "none" }
+              }}
+            >
+              Jump to Transcript
+            </Button>
             <SessionInsightCard
               sessionId={session.id}
               analysis={session.analysis}

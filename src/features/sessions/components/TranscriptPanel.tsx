@@ -1,6 +1,20 @@
+"use client";
+
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import ExpandLessRoundedIcon from "@mui/icons-material/ExpandLessRounded";
+import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import SubjectRoundedIcon from "@mui/icons-material/SubjectRounded";
-import { Box, Button, Card, CardContent, Divider, Stack, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Collapse,
+  Divider,
+  Stack,
+  Typography
+} from "@mui/material";
 
 interface TranscriptPanelProps {
   transcriptText: string;
@@ -156,6 +170,100 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
   const entries = buildTranscriptEntries(transcriptText, highlightedQuotes);
   const csvContent = buildTranscriptCsv(entries);
   const downloadHref = `data:text/csv;charset=utf-8,${encodeURIComponent(csvContent)}`;
+  const [isMobileTranscriptOpen, setIsMobileTranscriptOpen] = useState(false);
+
+  useEffect(() => {
+    const expandOnTranscriptHash = () => {
+      if (window.location.hash === "#transcript-panel") {
+        setIsMobileTranscriptOpen(true);
+      }
+    };
+
+    expandOnTranscriptHash();
+    window.addEventListener("hashchange", expandOnTranscriptHash);
+
+    return () => {
+      window.removeEventListener("hashchange", expandOnTranscriptHash);
+    };
+  }, []);
+
+  const transcriptRows = (
+    <Stack sx={{ maxHeight: { xs: "none", lg: "calc(100vh - 280px)" }, overflowY: "auto" }}>
+      {entries.map((entry) => (
+        <Box
+          key={entry.id}
+          sx={{
+            px: { xs: 2, md: 2.5 },
+            py: { xs: 1.5, md: 1.9 },
+            backgroundColor: entry.highlighted ? "var(--shamiri-red-bg)" : "transparent",
+            ...(entry.highlighted
+              ? {
+                  mx: { xs: 1, md: 1.25 },
+                  my: 0.6,
+                  borderRadius: 2,
+                  borderLeft: "4px solid",
+                  borderLeftColor: "error.main"
+                }
+              : null)
+          }}
+        >
+          <Stack direction="row" spacing={1.75} alignItems="flex-start">
+            <Stack
+              sx={{
+                width: { xs: 48, md: 54 },
+                minWidth: { xs: 48, md: 54 },
+                pt: 0.2,
+                color: entry.highlighted ? "error.main" : "text.disabled"
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 800,
+                  color: "inherit",
+                  letterSpacing: 0.35,
+                  fontSize: { xs: 10, md: 10.5 }
+                }}
+              >
+                {entry.timestampLabel}
+              </Typography>
+            </Stack>
+
+            <Stack spacing={0.8} sx={{ flex: 1, minWidth: 0 }}>
+              <Box
+                component="span"
+                sx={{
+                  display: "inline-block",
+                  alignSelf: "flex-start",
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: 999,
+                  mb: 0.35,
+                  fontSize: { xs: 9, md: 10 },
+                  fontWeight: 800,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.25,
+                  ...speakerBadgeStyles(entry.speaker)
+                }}
+              >
+                {entry.speaker}
+              </Box>
+              <Typography
+                sx={{
+                  fontSize: { xs: 13, md: 14 },
+                  lineHeight: { xs: 1.5, md: 1.55 },
+                  color: "primary.main",
+                  fontStyle: entry.highlighted ? "italic" : "normal"
+                }}
+              >
+                {entry.content}
+              </Typography>
+            </Stack>
+          </Stack>
+        </Box>
+      ))}
+    </Stack>
+  );
 
   return (
     <Card sx={{ borderRadius: 3, backgroundColor: "common.white" }}>
@@ -204,81 +312,35 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
 
         <Divider />
 
-        <Stack sx={{ maxHeight: { xs: "none", lg: "calc(100vh - 280px)" }, overflowY: "auto" }}>
-          {entries.map((entry) => (
-            <Box
-              key={entry.id}
-              sx={{
-                px: { xs: 2, md: 2.5 },
-                py: { xs: 1.5, md: 1.9 },
-                backgroundColor: entry.highlighted ? "var(--shamiri-red-bg)" : "transparent",
-                ...(entry.highlighted
-                  ? {
-                      mx: { xs: 1, md: 1.25 },
-                      my: 0.6,
-                      borderRadius: 2,
-                      borderLeft: "4px solid",
-                      borderLeftColor: "error.main"
-                    }
-                  : null)
-              }}
-            >
-              <Stack direction="row" spacing={1.75} alignItems="flex-start">
-                <Stack
-                  sx={{
-                    width: { xs: 48, md: 54 },
-                    minWidth: { xs: 48, md: 54 },
-                    pt: 0.2,
-                    color: entry.highlighted ? "error.main" : "text.disabled"
-                  }}
-                >
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontWeight: 800,
-                      color: "inherit",
-                      letterSpacing: 0.35,
-                      fontSize: { xs: 10, md: 10.5 }
-                    }}
-                  >
-                    {entry.timestampLabel}
-                  </Typography>
-                </Stack>
-
-                <Stack spacing={0.8} sx={{ flex: 1, minWidth: 0 }}>
-                  <Box
-                    component="span"
-                    sx={{
-                      display: "inline-block",
-                      alignSelf: "flex-start",
-                      px: 1,
-                      py: 0.25,
-                      borderRadius: 999,
-                      mb: 0.35,
-                      fontSize: { xs: 9, md: 10 },
-                      fontWeight: 800,
-                      textTransform: "uppercase",
-                      letterSpacing: 0.25,
-                      ...speakerBadgeStyles(entry.speaker)
-                    }}
-                  >
-                    {entry.speaker}
-                  </Box>
-                  <Typography
-                    sx={{
-                      fontSize: { xs: 13, md: 14 },
-                      lineHeight: { xs: 1.5, md: 1.55 },
-                      color: "primary.main",
-                      fontStyle: entry.highlighted ? "italic" : "normal"
-                    }}
-                  >
-                    {entry.content}
-                  </Typography>
-                </Stack>
-              </Stack>
-            </Box>
-          ))}
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ px: { xs: 2, md: 2.5 }, py: 1, display: { xs: "flex", md: "none" } }}
+        >
+          <Typography variant="caption" color="text.secondary">
+            Hidden by default on mobile for faster review flow.
+          </Typography>
+          <Button
+            onClick={() => {
+              setIsMobileTranscriptOpen((value) => !value);
+            }}
+            size="small"
+            variant="text"
+            startIcon={
+              isMobileTranscriptOpen ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />
+            }
+            sx={{ textTransform: "none", fontWeight: 700 }}
+          >
+            {isMobileTranscriptOpen ? "Hide Transcript" : "Show Transcript"}
+          </Button>
         </Stack>
+
+        <Collapse in={isMobileTranscriptOpen} sx={{ display: { xs: "block", md: "none" } }}>
+          {transcriptRows}
+        </Collapse>
+
+        <Box sx={{ display: { xs: "none", md: "block" } }}>{transcriptRows}</Box>
       </CardContent>
     </Card>
   );
