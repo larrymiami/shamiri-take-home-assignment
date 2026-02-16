@@ -3,6 +3,8 @@ import type { SessionStatus } from "@/server/types/domain";
 
 interface SessionStatusChipProps {
   status: SessionStatus;
+  size?: "small" | "medium";
+  prominent?: boolean;
 }
 
 const statusLabel: Record<SessionStatus, string> = {
@@ -12,15 +14,28 @@ const statusLabel: Record<SessionStatus, string> = {
   RISK: "Risk"
 };
 
-export function SessionStatusChip({ status }: SessionStatusChipProps) {
+export function SessionStatusChip({
+  status,
+  size = "small",
+  prominent = false
+}: SessionStatusChipProps) {
+  const baseSx = prominent
+    ? {
+        height: 36,
+        fontSize: 13,
+        px: 1.2
+      }
+    : undefined;
+
   if (status === "RISK") {
     return (
       <Chip
-        size="small"
+        size={size}
         label={statusLabel[status]}
         sx={{
           backgroundColor: "error.main",
-          color: "common.white"
+          color: "common.white",
+          ...baseSx
         }}
       />
     );
@@ -29,11 +44,12 @@ export function SessionStatusChip({ status }: SessionStatusChipProps) {
   if (status === "FLAGGED_FOR_REVIEW") {
     return (
       <Chip
-        size="small"
+        size={size}
         label={statusLabel[status]}
         sx={{
           backgroundColor: "warning.main",
-          color: "common.white"
+          color: "common.white",
+          ...baseSx
         }}
       />
     );
@@ -43,12 +59,13 @@ export function SessionStatusChip({ status }: SessionStatusChipProps) {
     return (
       <Chip
         variant="outlined"
-        size="small"
+        size={size}
         label={statusLabel[status]}
         sx={{
           borderColor: "var(--shamiri-border-green)",
           color: "success.main",
-          backgroundColor: "var(--shamiri-light-green)"
+          backgroundColor: "var(--shamiri-light-green)",
+          ...baseSx
         }}
       />
     );
@@ -57,12 +74,13 @@ export function SessionStatusChip({ status }: SessionStatusChipProps) {
   return (
     <Chip
       variant="outlined"
-      size="small"
+      size={size}
       label={statusLabel[status]}
       sx={{
         borderColor: "divider",
         backgroundColor: "var(--shamiri-background-secondary)",
-        color: "text.secondary"
+        color: "text.secondary",
+        ...baseSx
       }}
     />
   );

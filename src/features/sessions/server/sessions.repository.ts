@@ -1,19 +1,29 @@
 import dayjs from "dayjs";
 import type {
+  SessionAnalysisDTO,
+  SessionDetailDTO,
   SessionListItem,
   SessionListQuery,
-  SessionListResult
+  SessionListResult,
+  SupervisorReviewInput
 } from "@/features/sessions/types";
+import { deriveSessionDisplayStatusFromSafetyFlag } from "@/features/sessions/utils/status";
 import prisma from "@/server/db/prisma";
+import { SessionAnalysisSchema } from "@/server/services/ai/schemas";
 import type { SessionStatus } from "@/server/types/domain";
 
 type SessionFindManyArgs = NonNullable<Parameters<typeof prisma.session.findMany>[0]>;
 type SessionWhereInput = NonNullable<SessionFindManyArgs["where"]>;
+type AnalysisUpsertArgs = NonNullable<Parameters<typeof prisma.aIAnalysis.upsert>[0]>;
+type AnalysisResultJsonInput = AnalysisUpsertArgs["create"]["resultJson"];
 type SessionListRow = {
   id: string;
   groupId: string;
   occurredAt: Date;
   finalStatus: SessionStatus | null;
+  analysis: {
+    safetyFlag: "SAFE" | "RISK";
+  } | null;
   fellow: {
     name: string;
   };
@@ -21,10 +31,14 @@ type SessionListRow = {
 type SessionMetricRow = {
   occurredAt: Date;
   finalStatus: SessionStatus | null;
+  analysis: {
+    safetyFlag: "SAFE" | "RISK";
+  } | null;
 };
 
-function deriveDisplayStatus(finalStatus: SessionStatus | null): SessionStatus {
-  return finalStatus ?? "PROCESSED";
+function parseStoredAnalysis(resultJson: unknown): SessionAnalysisDTO | null {
+  const parsed = SessionAnalysisSchema.safeParse(resultJson);
+  return parsed.success ? parsed.data : null;
 }
 
 function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput | undefined {
@@ -34,11 +48,38 @@ function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput
 
   if (status === "PROCESSED") {
     return {
-      OR: [{ finalStatus: null }, { finalStatus: "PROCESSED" }]
+      OR: [
+        { finalStatus: "PROCESSED" },
+        {
+          AND: [{ finalStatus: null }, { analysis: { is: null } }]
+        }
+      ]
     };
   }
 
-  return { finalStatus: status };
+  if (status === "SAFE") {
+    return {
+      OR: [
+        { finalStatus: "SAFE" },
+        {
+          AND: [{ finalStatus: null }, { analysis: { is: { safetyFlag: "SAFE" } } }]
+        }
+      ]
+    };
+  }
+
+  if (status === "RISK") {
+    return {
+      OR: [
+        { finalStatus: "RISK" },
+        {
+          AND: [{ finalStatus: null }, { analysis: { is: { safetyFlag: "RISK" } } }]
+        }
+      ]
+    };
+  }
+
+  return { finalStatus: "FLAGGED_FOR_REVIEW" };
 }
 
 function buildSearchWhere(search: string): SessionWhereInput | undefined {
@@ -95,6 +136,11 @@ export async function listForSupervisor(
       groupId: true,
       occurredAt: true,
       finalStatus: true,
+      analysis: {
+        select: {
+          safetyFlag: true
+        }
+      },
       fellow: {
         select: {
           name: true
@@ -117,7 +163,10 @@ export async function listForSupervisor(
         fellowName: session.fellow.name,
         occurredAt: session.occurredAt.toISOString(),
         groupId: session.groupId,
-        displayStatus: deriveDisplayStatus(session.finalStatus)
+        displayStatus: deriveSessionDisplayStatusFromSafetyFlag({
+          finalStatus: session.finalStatus,
+          analysisSafetyFlag: session.analysis?.safetyFlag ?? null
+        })
       })
     ),
     page: safePage,
@@ -136,7 +185,12 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
     where: { supervisorId },
     select: {
       occurredAt: true,
-      finalStatus: true
+      finalStatus: true,
+      analysis: {
+        select: {
+          safetyFlag: true
+        }
+      }
     }
   })) as SessionMetricRow[];
 
@@ -146,7 +200,10 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
   let todayTotal = 0;
 
   for (const session of sessions) {
-    const status = deriveDisplayStatus(session.finalStatus);
+    const status = deriveSessionDisplayStatusFromSafetyFlag({
+      finalStatus: session.finalStatus,
+      analysisSafetyFlag: session.analysis?.safetyFlag ?? null
+    });
 
     if (status === "RISK") {
       riskCount += 1;
@@ -169,5 +226,197 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
     sessionsNeedingReview,
     reviewedToday,
     todayTotal
+  };
+}
+
+export async function getSessionSupervisorId(sessionId: string): Promise<string | null> {
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId },
+    select: { supervisorId: true }
+  });
+
+  return session?.supervisorId ?? null;
+}
+
+export async function getSessionTranscriptById(
+  sessionId: string
+): Promise<{ id: string; transcriptText: string } | null> {
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId },
+    select: { id: true, transcriptText: true }
+  });
+
+  return session
+    ? {
+        id: session.id,
+        transcriptText: session.transcriptText
+      }
+    : null;
+}
+
+export async function getSessionAnalysisBySessionId(
+  sessionId: string
+): Promise<SessionAnalysisDTO | null> {
+  const analysis = await prisma.aIAnalysis.findUnique({
+    where: { sessionId },
+    select: {
+      resultJson: true
+    }
+  });
+
+  if (!analysis) {
+    return null;
+  }
+
+  return parseStoredAnalysis(analysis.resultJson);
+}
+
+export async function upsertSessionAnalysis(
+  sessionId: string,
+  analysis: SessionAnalysisDTO
+): Promise<SessionAnalysisDTO> {
+  const saved = await prisma.aIAnalysis.upsert({
+    where: { sessionId },
+    create: {
+      sessionId,
+      resultJson: analysis as unknown as AnalysisResultJsonInput,
+      safetyFlag: analysis.riskDetection.flag,
+      riskQuotes: analysis.riskDetection.extractedQuotes,
+      model: analysis.meta.model,
+      promptVersion: analysis.meta.promptVersion,
+      latencyMs: analysis.meta.latencyMs
+    },
+    update: {
+      resultJson: analysis as unknown as AnalysisResultJsonInput,
+      safetyFlag: analysis.riskDetection.flag,
+      riskQuotes: analysis.riskDetection.extractedQuotes,
+      model: analysis.meta.model,
+      promptVersion: analysis.meta.promptVersion,
+      latencyMs: analysis.meta.latencyMs
+    },
+    select: {
+      resultJson: true
+    }
+  });
+
+  const parsed = parseStoredAnalysis(saved.resultJson);
+
+  if (!parsed) {
+    throw new Error("Stored analysis payload failed contract validation");
+  }
+
+  return parsed;
+}
+
+export async function getSessionDetailForSupervisor(
+  supervisorId: string,
+  sessionId: string
+): Promise<SessionDetailDTO | null> {
+  const session = await prisma.session.findFirst({
+    where: {
+      id: sessionId,
+      supervisorId
+    },
+    select: {
+      id: true,
+      groupId: true,
+      occurredAt: true,
+      transcriptText: true,
+      finalStatus: true,
+      fellow: {
+        select: {
+          name: true
+        }
+      },
+      analysis: {
+        select: {
+          resultJson: true
+        }
+      },
+      review: {
+        select: {
+          decision: true,
+          finalStatus: true,
+          note: true,
+          updatedAt: true
+        }
+      }
+    }
+  });
+
+  if (!session) {
+    return null;
+  }
+
+  const analysis = session.analysis ? parseStoredAnalysis(session.analysis.resultJson) : null;
+
+  return {
+    id: session.id,
+    fellowName: session.fellow.name,
+    occurredAt: session.occurredAt.toISOString(),
+    groupId: session.groupId,
+    transcriptText: session.transcriptText,
+    finalStatus: session.finalStatus,
+    analysis: analysis ?? undefined,
+    review: session.review
+      ? {
+          decision: session.review.decision,
+          finalStatus: session.review.finalStatus,
+          note: session.review.note,
+          updatedAt: session.review.updatedAt.toISOString()
+        }
+      : undefined
+  };
+}
+
+export async function submitSessionReview(params: {
+  sessionId: string;
+  supervisorId: string;
+  payload: SupervisorReviewInput;
+}): Promise<{
+  decision: SupervisorReviewInput["decision"];
+  finalStatus: SessionStatus;
+  note: string;
+  updatedAt: string;
+}> {
+  const { sessionId, supervisorId, payload } = params;
+
+  const [, review] = await prisma.$transaction([
+    prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        finalStatus: payload.finalStatus
+      },
+      select: { id: true }
+    }),
+    prisma.supervisorReview.upsert({
+      where: { sessionId },
+      create: {
+        sessionId,
+        supervisorId,
+        decision: payload.decision,
+        finalStatus: payload.finalStatus,
+        note: payload.note
+      },
+      update: {
+        supervisorId,
+        decision: payload.decision,
+        finalStatus: payload.finalStatus,
+        note: payload.note
+      },
+      select: {
+        decision: true,
+        finalStatus: true,
+        note: true,
+        updatedAt: true
+      }
+    })
+  ]);
+
+  return {
+    decision: review.decision,
+    finalStatus: review.finalStatus,
+    note: review.note,
+    updatedAt: review.updatedAt.toISOString()
   };
 }

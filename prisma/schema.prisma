@@ -19,14 +19,26 @@ enum SessionStatus {
   RISK
 }
 
+enum SafetyFlag {
+  SAFE
+  RISK
+}
+
+enum ReviewDecision {
+  VALIDATED
+  REJECTED
+  OVERRIDDEN
+}
+
 model Supervisor {
   id           String  @id @default(cuid())
   name         String
   email        String  @unique
   passwordHash String?
 
-  fellows Fellow[]
+  fellows  Fellow[]
   sessions Session[]
+  reviews  SupervisorReview[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -57,6 +69,8 @@ model Session {
 
   supervisor Supervisor @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
   fellow     Fellow     @relation(fields: [fellowId], references: [id], onDelete: Cascade)
+  analysis   AIAnalysis?
+  review     SupervisorReview?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -64,4 +78,36 @@ model Session {
   @@index([supervisorId])
   @@index([fellowId])
   @@index([occurredAt])
+}
+
+model AIAnalysis {
+  id            String     @id @default(cuid())
+  sessionId     String     @unique
+  resultJson    Json
+  safetyFlag    SafetyFlag
+  riskQuotes    String[]   @default([])
+  model         String
+  promptVersion String
+  latencyMs     Int?
+  createdAt     DateTime   @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([safetyFlag])
+}
+
+model SupervisorReview {
+  id           String         @id @default(cuid())
+  sessionId    String         @unique
+  supervisorId String
+  decision     ReviewDecision
+  finalStatus  SessionStatus
+  note         String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  session    Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  supervisor Supervisor @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+
+  @@index([supervisorId])
 }

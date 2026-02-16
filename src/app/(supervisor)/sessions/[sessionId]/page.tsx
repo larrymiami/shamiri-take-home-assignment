@@ -1,4 +1,6 @@
-import { Typography } from "@mui/material";
+import { notFound } from "next/navigation";
+import { SessionDetailView } from "@/features/sessions/components/SessionDetailView";
+import { getSessionDetailForSupervisor } from "@/features/sessions/server/sessions.repository";
 import { requireSupervisorSession } from "@/server/auth/session";
 
 interface SessionDetailPageProps {
@@ -8,17 +10,13 @@ interface SessionDetailPageProps {
 }
 
 export default async function SessionDetailPage({ params }: SessionDetailPageProps) {
-  await requireSupervisorSession();
+  const authSession = await requireSupervisorSession();
   const { sessionId } = await params;
+  const detail = await getSessionDetailForSupervisor(authSession.user.id, sessionId);
 
-  return (
-    <>
-      <Typography variant="h3" sx={{ mb: 1 }}>
-        Session Detail
-      </Typography>
-      <Typography color="text.secondary">
-        Session <strong>{sessionId}</strong> detail view is coming next.
-      </Typography>
-    </>
-  );
+  if (!detail) {
+    notFound();
+  }
+
+  return <SessionDetailView session={detail} />;
 }
