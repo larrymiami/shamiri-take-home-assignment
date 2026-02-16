@@ -6,6 +6,7 @@ import {
   buildSessionAnalysisPrompt
 } from "@/server/services/ai/prompts";
 import {
+  SessionAnalysisLLMOutputJSONSchema,
   SessionAnalysisLLMOutputSchema,
   SessionAnalysisSchema,
   type SessionAnalysisDTO
@@ -31,14 +32,28 @@ function parseLLMOutput(jsonText: string) {
 
 export async function analyzeSession(transcriptText: string): Promise<SessionAnalysisDTO> {
   const startedAt = Date.now();
-  const { systemPrompt, userPrompt } = buildSessionAnalysisPrompt(transcriptText);
+  const {
+    systemPrompt,
+    userPrompt,
+    transcriptCharsSent,
+    transcriptWasTruncated,
+    transcriptWindowCount,
+    transcriptRiskLinesIncluded
+  } = buildSessionAnalysisPrompt(transcriptText);
   let lastValidationMessage = "invalid AI output";
 
   for (let attempt = 1; attempt <= MAX_VALIDATION_ATTEMPTS; attempt += 1) {
     const completion = await openai.chat.completions.create({
       model: SESSION_ANALYSIS_MODEL,
       temperature: 0.1,
-      response_format: { type: "json_object" },
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "session_analysis",
+          strict: true,
+          schema: SessionAnalysisLLMOutputJSONSchema
+        }
+      },
       messages: [
         { role: "system", content: systemPrompt },
         {
@@ -66,7 +81,11 @@ export async function analyzeSession(transcriptText: string): Promise<SessionAna
           model: SESSION_ANALYSIS_MODEL,
           promptVersion: PROMPT_VERSION,
           generatedAt: new Date().toISOString(),
-          latencyMs: Date.now() - startedAt
+          latencyMs: Date.now() - startedAt,
+          transcriptCharsSent,
+          transcriptWasTruncated,
+          transcriptWindowCount,
+          transcriptRiskLinesIncluded
         }
       });
 
