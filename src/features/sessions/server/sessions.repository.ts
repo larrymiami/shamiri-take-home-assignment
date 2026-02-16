@@ -48,11 +48,38 @@ function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput
 
   if (status === "PROCESSED") {
     return {
-      OR: [{ finalStatus: null }, { finalStatus: "PROCESSED" }]
+      OR: [
+        { finalStatus: "PROCESSED" },
+        {
+          AND: [{ finalStatus: null }, { analysis: { is: null } }]
+        }
+      ]
     };
   }
 
-  return { finalStatus: status };
+  if (status === "SAFE") {
+    return {
+      OR: [
+        { finalStatus: "SAFE" },
+        {
+          AND: [{ finalStatus: null }, { analysis: { is: { safetyFlag: "SAFE" } } }]
+        }
+      ]
+    };
+  }
+
+  if (status === "RISK") {
+    return {
+      OR: [
+        { finalStatus: "RISK" },
+        {
+          AND: [{ finalStatus: null }, { analysis: { is: { safetyFlag: "RISK" } } }]
+        }
+      ]
+    };
+  }
+
+  return { finalStatus: "FLAGGED_FOR_REVIEW" };
 }
 
 function buildSearchWhere(search: string): SessionWhereInput | undefined {
