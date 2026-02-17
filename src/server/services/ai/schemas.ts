@@ -73,7 +73,7 @@ export const SessionAnalysisLLMOutputSchema = z.object({
 export const SessionAnalysisMetaSchema = z.object({
   model: z.string().min(1),
   promptVersion: z.string().min(1),
-  generatedAt: z.string().datetime(),
+  generatedAt: z.iso.datetime(),
   latencyMs: z.number().int().positive().optional(),
   transcriptCharsSent: z.number().int().positive().optional(),
   transcriptWasTruncated: z.boolean().optional(),
