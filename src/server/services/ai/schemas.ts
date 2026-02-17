@@ -15,7 +15,7 @@ const threeSentenceSummarySchema = z
 
     if (sentenceCount !== 3) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "sessionSummary must be exactly 3 sentences"
       });
     }
@@ -40,7 +40,7 @@ const riskDetectionSchema = z
   .superRefine((value, ctx) => {
     if (value.flag === "RISK" && value.extractedQuotes.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["extractedQuotes"],
         message: "RISK requires at least one extracted quote"
       });
@@ -48,7 +48,7 @@ const riskDetectionSchema = z
 
     if (value.flag === "SAFE" && value.extractedQuotes.length > 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["extractedQuotes"],
         message: "SAFE must not include extracted risk quotes"
       });

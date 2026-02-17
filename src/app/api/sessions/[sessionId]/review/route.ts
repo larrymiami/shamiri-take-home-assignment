@@ -27,7 +27,7 @@ const SupervisorReviewInputSchema = z
     // Enforce auditability: rejected/overridden decisions require rationale.
     if ((value.decision === "REJECTED" || value.decision === "OVERRIDDEN") && !value.note) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["note"],
         message: "A note is required when rejecting or overriding"
       });
