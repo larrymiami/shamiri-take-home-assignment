@@ -41,9 +41,41 @@ type SessionMetricRow = {
   } | null;
 };
 
+function normalizeLegacyRiskTriage(resultJson: unknown): unknown {
+  if (typeof resultJson !== "object" || resultJson === null) {
+    return resultJson;
+  }
+
+  const payload = resultJson as Record<string, unknown>;
+  const riskDetectionRaw = payload["riskDetection"];
+
+  if (typeof riskDetectionRaw !== "object" || riskDetectionRaw === null) {
+    return resultJson;
+  }
+
+  const riskDetection = riskDetectionRaw as Record<string, unknown>;
+
+  if (
+    riskDetection["flag"] !== "RISK" ||
+    Object.prototype.hasOwnProperty.call(riskDetection, "requiresSupervisorReview")
+  ) {
+    return resultJson;
+  }
+
+  return {
+    ...payload,
+    riskDetection: {
+      ...riskDetection,
+      // Backward compatibility for analyses persisted before this field existed.
+      requiresSupervisorReview: true
+    }
+  };
+}
+
 function parseStoredAnalysis(resultJson: unknown): SessionAnalysisDTO | null {
   // Guard against historical/invalid JSON payloads in storage.
-  const parsed = SessionAnalysisSchema.safeParse(resultJson);
+  const normalized = normalizeLegacyRiskTriage(resultJson);
+  const parsed = SessionAnalysisSchema.safeParse(normalized);
   return parsed.success ? parsed.data : null;
 }
 
