@@ -12,18 +12,21 @@ export function deriveSessionDisplayStatus({
 }: DeriveSessionStatusInput): SessionStatus {
   return deriveSessionDisplayStatusFromSafetyFlag({
     finalStatus,
-    analysisSafetyFlag: analysis?.riskDetection.flag
+    analysisSafetyFlag: analysis?.riskDetection.flag,
+    analysisRequiresSupervisorReview: analysis?.riskDetection.requiresSupervisorReview
   });
 }
 
 interface DeriveSessionStatusFromSafetyFlagInput {
   finalStatus?: SessionStatus | null;
   analysisSafetyFlag?: "SAFE" | "RISK" | null;
+  analysisRequiresSupervisorReview?: boolean | null;
 }
 
 export function deriveSessionDisplayStatusFromSafetyFlag({
   finalStatus,
-  analysisSafetyFlag
+  analysisSafetyFlag,
+  analysisRequiresSupervisorReview
 }: DeriveSessionStatusFromSafetyFlagInput): SessionStatus {
   // Human review is canonical. AI flag is a fallback only when no final status exists.
   if (finalStatus) {
@@ -32,6 +35,10 @@ export function deriveSessionDisplayStatusFromSafetyFlag({
 
   if (analysisSafetyFlag === "RISK") {
     return "RISK";
+  }
+
+  if (analysisRequiresSupervisorReview) {
+    return "FLAGGED_FOR_REVIEW";
   }
 
   if (analysisSafetyFlag === "SAFE") {

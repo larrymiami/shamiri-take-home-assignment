@@ -23,6 +23,7 @@ type SessionListRow = {
   finalStatus: SessionStatus | null;
   analysis: {
     safetyFlag: "SAFE" | "RISK";
+    requiresSupervisorReview: boolean;
   } | null;
   fellow: {
     name: string;
@@ -33,6 +34,7 @@ type SessionMetricRow = {
   finalStatus: SessionStatus | null;
   analysis: {
     safetyFlag: "SAFE" | "RISK";
+    requiresSupervisorReview: boolean;
   } | null;
   review: {
     id: string;
@@ -68,7 +70,10 @@ function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput
       OR: [
         { finalStatus: "SAFE" },
         {
-          AND: [{ finalStatus: null }, { analysis: { is: { safetyFlag: "SAFE" } } }]
+          AND: [
+            { finalStatus: null },
+            { analysis: { is: { safetyFlag: "SAFE", requiresSupervisorReview: false } } }
+          ]
         }
       ]
     };
@@ -86,7 +91,17 @@ function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput
     };
   }
 
-  return { finalStatus: "FLAGGED_FOR_REVIEW" };
+  return {
+    OR: [
+      { finalStatus: "FLAGGED_FOR_REVIEW" },
+      {
+        AND: [
+          { finalStatus: null },
+          { analysis: { is: { safetyFlag: "SAFE", requiresSupervisorReview: true } } }
+        ]
+      }
+    ]
+  };
 }
 
 function buildSearchWhere(search: string): SessionWhereInput | undefined {
@@ -145,7 +160,8 @@ export async function listForSupervisor(
       finalStatus: true,
       analysis: {
         select: {
-          safetyFlag: true
+          safetyFlag: true,
+          requiresSupervisorReview: true
         }
       },
       fellow: {
@@ -173,7 +189,8 @@ export async function listForSupervisor(
         groupId: session.groupId,
         displayStatus: deriveSessionDisplayStatusFromSafetyFlag({
           finalStatus: session.finalStatus,
-          analysisSafetyFlag: session.analysis?.safetyFlag ?? null
+          analysisSafetyFlag: session.analysis?.safetyFlag ?? null,
+          analysisRequiresSupervisorReview: session.analysis?.requiresSupervisorReview ?? null
         })
       })
     ),
@@ -201,7 +218,8 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
       },
       analysis: {
         select: {
-          safetyFlag: true
+          safetyFlag: true,
+          requiresSupervisorReview: true
         }
       }
     }
@@ -215,7 +233,8 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
   for (const session of sessions) {
     const status = deriveSessionDisplayStatusFromSafetyFlag({
       finalStatus: session.finalStatus,
-      analysisSafetyFlag: session.analysis?.safetyFlag ?? null
+      analysisSafetyFlag: session.analysis?.safetyFlag ?? null,
+      analysisRequiresSupervisorReview: session.analysis?.requiresSupervisorReview ?? null
     });
 
     if (status === "RISK") {
@@ -297,6 +316,7 @@ export async function upsertSessionAnalysis(
       resultJson: analysis as unknown as AnalysisResultJsonInput,
       safetyFlag: analysis.riskDetection.flag,
       riskQuotes: analysis.riskDetection.extractedQuotes,
+      requiresSupervisorReview: analysis.riskDetection.requiresSupervisorReview,
       model: analysis.meta.model,
       promptVersion: analysis.meta.promptVersion,
       latencyMs: analysis.meta.latencyMs,
@@ -307,6 +327,7 @@ export async function upsertSessionAnalysis(
       resultJson: analysis as unknown as AnalysisResultJsonInput,
       safetyFlag: analysis.riskDetection.flag,
       riskQuotes: analysis.riskDetection.extractedQuotes,
+      requiresSupervisorReview: analysis.riskDetection.requiresSupervisorReview,
       model: analysis.meta.model,
       promptVersion: analysis.meta.promptVersion,
       latencyMs: analysis.meta.latencyMs,

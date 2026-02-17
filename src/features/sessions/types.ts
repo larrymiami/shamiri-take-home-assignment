@@ -59,6 +59,7 @@ export interface SessionAnalysisDTO {
     flag: SafetyFlag;
     rationale: string;
     extractedQuotes: string[];
+    requiresSupervisorReview: boolean;
   };
   meta: SessionAnalysisMetaDTO;
 }

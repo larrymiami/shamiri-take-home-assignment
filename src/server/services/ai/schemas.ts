@@ -35,7 +35,8 @@ const riskDetectionSchema = z
   .object({
     flag: z.enum(["SAFE", "RISK"]),
     rationale: z.string().min(10),
-    extractedQuotes: z.array(z.string().min(8)).max(3)
+    extractedQuotes: z.array(z.string().min(8)).max(3),
+    requiresSupervisorReview: z.boolean().default(false)
   })
   .superRefine((value, ctx) => {
     if (value.flag === "RISK" && value.extractedQuotes.length === 0) {
@@ -51,6 +52,14 @@ const riskDetectionSchema = z
         code: "custom",
         path: ["extractedQuotes"],
         message: "SAFE must not include extracted risk quotes"
+      });
+    }
+
+    if (value.flag === "RISK" && !value.requiresSupervisorReview) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requiresSupervisorReview"],
+        message: "RISK must require supervisor review"
       });
     }
   });

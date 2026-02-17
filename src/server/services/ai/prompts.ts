@@ -1,4 +1,4 @@
-export const PROMPT_VERSION = "session-analysis-v3";
+export const PROMPT_VERSION = "session-analysis-v4";
 export const SESSION_ANALYSIS_MODEL = "gpt-4o-mini";
 
 const MAX_TRANSCRIPT_CHARS = 22000;
@@ -210,7 +210,7 @@ export function buildSessionAnalysisPrompt(transcriptText: string): {
       '  "contentCoverage": { "score": 1|2|3, "rating": "MISSED|PARTIAL|COMPLETE", "justification": "...", "evidenceQuotes": ["..."] },',
       '  "facilitationQuality": { "score": 1|2|3, "rating": "POOR|ADEQUATE|EXCELLENT", "justification": "...", "evidenceQuotes": ["..."] },',
       '  "protocolSafety": { "score": 1|2|3, "rating": "VIOLATION|MINOR_DRIFT|ADHERENT", "justification": "...", "evidenceQuotes": ["..."] },',
-      '  "riskDetection": { "flag": "SAFE|RISK", "rationale": "...", "extractedQuotes": ["..."] }',
+      '  "riskDetection": { "flag": "SAFE|RISK", "rationale": "...", "extractedQuotes": ["..."], "requiresSupervisorReview": true|false }',
       "}",
       "Rules:",
       "- sessionSummary must be exactly 3 complete sentences.",
@@ -235,8 +235,11 @@ export function buildSessionAnalysisPrompt(transcriptText: string): {
       "- Do NOT set RISK for hypothetical or educational examples, role-play, idioms, or normal Growth Mindset discussions about failure/hard times.",
       "- Do NOT set RISK for historical mentions that are clearly not current and not escalating now.",
       "- Prioritize first-person, present-tense, personally endorsed statements.",
-      "- If evidence is ambiguous, set SAFE and explain ambiguity in rationale.",
+      "- If evidence is ambiguous but concerning, set flag = SAFE and requiresSupervisorReview = true.",
+      "- Use requiresSupervisorReview = true for borderline safety concerns that do not meet RISK threshold but should be triaged by a supervisor.",
+      "- Use requiresSupervisorReview = false only when there is no meaningful safety concern requiring manual triage.",
       "- If riskDetection.flag is RISK, include 1-3 exact quotes that directly justify the threshold.",
+      "- If riskDetection.flag is RISK, requiresSupervisorReview must be true.",
       "- If riskDetection.flag is SAFE, extractedQuotes must be [].",
       "- Transcript may be represented as sampled windows (head, middle, tail) plus explicit risk-trigger lines.",
       "Transcript:",

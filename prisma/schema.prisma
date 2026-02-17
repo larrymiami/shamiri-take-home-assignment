@@ -85,6 +85,7 @@ model AIAnalysis {
   sessionId     String     @unique
   resultJson    Json
   safetyFlag    SafetyFlag
+  requiresSupervisorReview Boolean @default(false)
   riskQuotes    String[]   @default([])
   model         String
   promptVersion String
