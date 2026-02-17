@@ -336,6 +336,7 @@ export function SessionsTable({
               size="small"
               renderItem={(item) => {
                 const targetPage = item.page ?? 1;
+                // Use anchor navigation so pagination stays server-rendered and URL-driven.
                 return (
                   <PaginationItem
                     {...item}

@@ -69,6 +69,7 @@ export const SessionAnalysisLLMOutputSchema = z.object({
   riskDetection: riskDetectionSchema
 });
 
+// Meta is persisted for auditability and prompt/model quality tracking over time.
 export const SessionAnalysisMetaSchema = z.object({
   model: z.string().min(1),
   promptVersion: z.string().min(1),
@@ -87,6 +88,7 @@ export const SessionAnalysisSchema = SessionAnalysisLLMOutputSchema.extend({
 const llmOutputJsonSchema = z.toJSONSchema(SessionAnalysisLLMOutputSchema);
 delete llmOutputJsonSchema.$schema;
 
+// JSON Schema is derived from Zod to keep one canonical contract source.
 export const SessionAnalysisLLMOutputJSONSchema = llmOutputJsonSchema;
 
 export type SessionAnalysisLLMOutput = z.infer<typeof SessionAnalysisLLMOutputSchema>;

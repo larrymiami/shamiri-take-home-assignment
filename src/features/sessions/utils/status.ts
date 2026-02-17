@@ -25,6 +25,7 @@ export function deriveSessionDisplayStatusFromSafetyFlag({
   finalStatus,
   analysisSafetyFlag
 }: DeriveSessionStatusFromSafetyFlagInput): SessionStatus {
+  // Human review is canonical. AI flag is a fallback only when no final status exists.
   if (finalStatus) {
     return finalStatus;
   }

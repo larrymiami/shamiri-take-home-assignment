@@ -26,6 +26,7 @@ export function LoginForm() {
   const [isPending, startTransition] = useTransition();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // UX-only for take-home scope; persistent device trust is not implemented yet.
   const [rememberDevice, setRememberDevice] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

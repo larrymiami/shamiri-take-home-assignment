@@ -6,6 +6,7 @@ import prisma from "@/server/db/prisma";
 
 export const authOptions = {
   secret: env.NEXTAUTH_SECRET,
+  // JWT keeps auth stateless for App Router server components and route handlers.
   session: { strategy: "jwt" },
 
   providers: [
@@ -28,6 +29,7 @@ export const authOptions = {
 
         if (!supervisor?.passwordHash) return null;
 
+        // Timing-safe password verification against seeded/DB hashes.
         const ok = await bcrypt.compare(password, supervisor.passwordHash);
         if (!ok) return null;
 
@@ -44,6 +46,7 @@ export const authOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        // Persist role/id on token so every request can authorize without DB lookup.
         token.sub = user.id;
         token.name = user.name;
         token.email = user.email;

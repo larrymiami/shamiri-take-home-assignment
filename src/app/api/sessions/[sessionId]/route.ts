@@ -29,6 +29,7 @@ export async function GET(_request: Request, context: SessionRouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Second scoped fetch ensures the returned payload also respects supervisor ownership.
   const detail = await getSessionDetailForSupervisor(authSession.user.id, sessionId);
 
   if (!detail) {

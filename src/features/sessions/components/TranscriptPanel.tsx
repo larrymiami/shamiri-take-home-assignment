@@ -179,6 +179,7 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
   useEffect(() => {
     const expandOnTranscriptHash = () => {
       if (window.location.hash === "#transcript-panel") {
+        // Supports "Jump to Transcript" CTA from the right rail on mobile.
         setIsMobileTranscriptOpen(true);
       }
     };
@@ -343,6 +344,7 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
         {isDesktopViewport ? (
           <Box>{renderTranscriptRows()}</Box>
         ) : (
+          // Unmount while collapsed to avoid rendering large transcript trees on mobile.
           <Collapse in={isMobileTranscriptOpen} unmountOnExit>
             {renderTranscriptRows()}
           </Collapse>

@@ -4,6 +4,7 @@ import { parsePositiveInt, parseSessionStatusFilter } from "@/lib/searchParams";
 import { getCurrentSession } from "@/server/auth/session";
 
 export async function GET(request: Request) {
+  // API routes use explicit role checks even if UI pages already gate access.
   const session = await getCurrentSession();
 
   if (!session?.user?.id || session.user.role !== "SUPERVISOR") {
@@ -11,6 +12,7 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
+  // Parse with shared helpers to match dashboard server component behavior.
   const sessions = await listForSupervisor(session.user.id, {
     page: parsePositiveInt(searchParams.get("page"), 1),
     pageSize: parsePositiveInt(searchParams.get("pageSize"), 10),

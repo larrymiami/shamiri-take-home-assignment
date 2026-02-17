@@ -24,6 +24,7 @@ const SupervisorReviewInputSchema = z
       .transform((value) => value.trim())
   })
   .superRefine((value, ctx) => {
+    // Enforce auditability: rejected/overridden decisions require rationale.
     if ((value.decision === "REJECTED" || value.decision === "OVERRIDDEN") && !value.note) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -78,6 +79,7 @@ export async function POST(request: Request, context: ReviewRouteContext) {
       payload: parsed.data
     });
 
+    // Keep page data in sync with the session status source of truth.
     revalidatePath("/dashboard");
     revalidatePath(`/sessions/${sessionId}`);
 

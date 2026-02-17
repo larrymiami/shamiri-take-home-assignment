@@ -40,6 +40,7 @@ type SessionMetricRow = {
 };
 
 function parseStoredAnalysis(resultJson: unknown): SessionAnalysisDTO | null {
+  // Guard against historical/invalid JSON payloads in storage.
   const parsed = SessionAnalysisSchema.safeParse(resultJson);
   return parsed.success ? parsed.data : null;
 }
@@ -50,6 +51,7 @@ function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput
   }
 
   if (status === "PROCESSED") {
+    // "Processed" means "not finalized by supervisor and no AI-derived SAFE/RISK yet".
     return {
       OR: [
         { finalStatus: "PROCESSED" },
@@ -61,6 +63,7 @@ function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput
   }
 
   if (status === "SAFE") {
+    // Include AI SAFE when finalStatus is still pending human review.
     return {
       OR: [
         { finalStatus: "SAFE" },
@@ -72,6 +75,7 @@ function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput
   }
 
   if (status === "RISK") {
+    // Include AI RISK so risk filtering works before supervisor override.
     return {
       OR: [
         { finalStatus: "RISK" },
@@ -160,6 +164,7 @@ export async function listForSupervisor(
   ]);
 
   return {
+    // Always return displayStatus derived with the same precedence used in filtering.
     items: sessions.map(
       (session: SessionListRow): SessionListItem => ({
         id: session.id,
@@ -223,6 +228,7 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
 
     if (dayjs(session.occurredAt).isSame(dayjs(), "day")) {
       todayTotal += 1;
+      // "Reviewed" means a supervisor decision exists, not just a non-null finalStatus.
       if (session.review !== null) {
         reviewedToday += 1;
       }
@@ -283,6 +289,7 @@ export async function upsertSessionAnalysis(
   sessionId: string,
   analysis: SessionAnalysisDTO
 ): Promise<SessionAnalysisDTO> {
+  // Idempotent persistence so repeated analyze calls do not duplicate rows.
   const saved = await prisma.aIAnalysis.upsert({
     where: { sessionId },
     create: {
@@ -393,6 +400,7 @@ export async function submitSessionReview(params: {
 }> {
   const { sessionId, supervisorId, payload } = params;
 
+  // Keep Session.finalStatus and SupervisorReview atomically consistent.
   const [, review] = await prisma.$transaction([
     prisma.session.update({
       where: { id: sessionId },

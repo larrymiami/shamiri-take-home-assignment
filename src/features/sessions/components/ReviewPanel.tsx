@@ -35,6 +35,7 @@ function normalizeReviewDecision(
   }
 
   if (!hasAnalysis && decision !== "OVERRIDDEN") {
+    // Without analysis, only manual override is a valid decision path.
     return "OVERRIDDEN";
   }
 
@@ -59,6 +60,7 @@ export function ReviewPanel({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Prevent invalid payloads when legacy review data predates AI generation.
   const effectiveDecision = hasAnalysis ? decision : "OVERRIDDEN";
   const requiresNote = effectiveDecision === "REJECTED" || effectiveDecision === "OVERRIDDEN";
   const decisionOptions: Array<{ value: ReviewDecision; label: string }> = hasAnalysis

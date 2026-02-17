@@ -42,6 +42,7 @@ function clampTranscript(transcriptText: string): {
   const separatorsCount = windowLabels.length - 1;
   const staticOverhead =
     windowLabels.join("").length + separatorsCount * WINDOW_SEPARATOR.length + 120;
+  // Reserve enough space for labels/separators so sampled windows stay predictable.
   const availableChars = Math.max(MIN_AVAILABLE_CHARS, MAX_TRANSCRIPT_CHARS - staticOverhead);
 
   const headChars = Math.max(1, Math.floor(availableChars * WINDOW_WEIGHTS.head));
@@ -90,6 +91,7 @@ function clampTranscript(transcriptText: string): {
     transcript,
     transcriptCharsSent: transcript.length,
     transcriptWasTruncated: true,
+    // Head + middle1 + middle2 + tail (risk lines are an auxiliary section).
     transcriptWindowCount: 4,
     transcriptRiskLinesIncluded: riskLinesIncluded
   };

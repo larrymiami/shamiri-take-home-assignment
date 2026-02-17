@@ -12,6 +12,7 @@ const adapter = new PrismaPg({
   connectionString: getDatabaseUrlFromEnv()
 });
 
+// Reuse the client in dev hot-reload to avoid connection storms.
 const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({

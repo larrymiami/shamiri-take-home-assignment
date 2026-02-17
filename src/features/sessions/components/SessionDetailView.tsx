@@ -34,6 +34,7 @@ export function SessionDetailView({ session }: SessionDetailViewProps) {
 
   return (
     <Grid container spacing={2.5} alignItems="flex-start">
+      {/* On mobile, transcript is intentionally below right-rail actions for faster triage flow. */}
       <Grid size={{ xs: 12, lg: 8 }} sx={{ order: { xs: 2, lg: 1 } }}>
         <Stack spacing={1.5}>
           <Stack spacing={0.8}>
@@ -118,6 +119,7 @@ export function SessionDetailView({ session }: SessionDetailViewProps) {
       </Grid>
 
       <Grid size={{ xs: 12, lg: 4 }} sx={{ order: { xs: 1, lg: 2 } }}>
+        {/* Keep analysis/risk/review visible while scrolling long transcripts on desktop. */}
         <Box sx={{ position: { lg: "sticky" }, top: { lg: 84 } }}>
           <Stack spacing={1.5}>
             <Button
