@@ -176,15 +176,17 @@ export async function listForSupervisor(
   supervisorId: string,
   query: SessionListQuery
 ): Promise<SessionListResult> {
+  const statusSortPriority: Record<SessionStatus, number> = {
+    RISK: 0,
+    FLAGGED_FOR_REVIEW: 1,
+    SAFE: 2,
+    PROCESSED: 3
+  };
   const safePage = Math.max(1, query.page);
   const safePageSize = Math.max(1, query.pageSize);
   const where = buildListWhere(supervisorId, query);
-
-  const sessionsPromise = prisma.session.findMany({
+  const allSessions: SessionListRow[] = (await prisma.session.findMany({
     where,
-    orderBy: { occurredAt: "desc" },
-    skip: (safePage - 1) * safePageSize,
-    take: safePageSize,
     select: {
       id: true,
       groupId: true,
@@ -202,18 +204,9 @@ export async function listForSupervisor(
         }
       }
     }
-  }) as Promise<SessionListRow[]>;
-
-  const totalCountPromise = prisma.session.count({ where });
-
-  const [sessions, totalCount]: [SessionListRow[], number] = await Promise.all([
-    sessionsPromise,
-    totalCountPromise
-  ]);
-
-  return {
-    // Always return displayStatus derived with the same precedence used in filtering.
-    items: sessions.map(
+  })) as SessionListRow[];
+  const sortedItems: SessionListItem[] = allSessions
+    .map(
       (session: SessionListRow): SessionListItem => ({
         id: session.id,
         fellowName: session.fellow.name,
@@ -225,7 +218,23 @@ export async function listForSupervisor(
           analysisRequiresSupervisorReview: session.analysis?.requiresSupervisorReview ?? null
         })
       })
-    ),
+    )
+    .sort((left, right) => {
+      const statusOrderDiff =
+        statusSortPriority[left.displayStatus] - statusSortPriority[right.displayStatus];
+
+      if (statusOrderDiff !== 0) {
+        return statusOrderDiff;
+      }
+
+      return dayjs(right.occurredAt).valueOf() - dayjs(left.occurredAt).valueOf();
+    });
+  const totalCount = sortedItems.length;
+  const offset = (safePage - 1) * safePageSize;
+  const paginatedItems = sortedItems.slice(offset, offset + safePageSize);
+
+  return {
+    items: paginatedItems,
     page: safePage,
     pageSize: safePageSize,
     totalCount
