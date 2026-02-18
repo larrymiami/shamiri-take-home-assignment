@@ -27,6 +27,7 @@ function normalizeSslParams(url: URL): void {
 }
 
 function assertProductionSslMode(url: URL): void {
+  // Keep local/dev flexible, but enforce encrypted transport in production.
   if (process.env.NODE_ENV !== "production") {
     return;
   }
@@ -47,6 +48,7 @@ export function getDatabaseUrlFromEnv(): string {
   }
 
   const url = new URL(value);
+  // Normalize before validation so legacy provider defaults ("prefer") do not weaken TLS.
   normalizeSslParams(url);
   assertProductionSslMode(url);
 

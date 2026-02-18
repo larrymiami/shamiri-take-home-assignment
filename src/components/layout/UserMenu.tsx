@@ -48,6 +48,7 @@ export function UserMenu({ name, email }: UserMenuProps) {
         open={isOpen}
         onClose={handleClose}
         keepMounted
+        // Prevent body scroll-lock width compensation from shifting the app bar.
         disableScrollLock
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         transformOrigin={{ vertical: "top", horizontal: "right" }}

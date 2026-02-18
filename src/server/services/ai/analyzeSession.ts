@@ -42,6 +42,7 @@ export async function analyzeSession(transcriptText: string): Promise<SessionAna
   } = buildSessionAnalysisPrompt(transcriptText);
   let lastValidationMessage = "invalid AI output";
 
+  // Retry once with stricter reminder when model returns malformed/invalid JSON.
   for (let attempt = 1; attempt <= MAX_VALIDATION_ATTEMPTS; attempt += 1) {
     const completion = await openai.chat.completions.create({
       model: SESSION_ANALYSIS_MODEL,
@@ -75,8 +76,17 @@ export async function analyzeSession(transcriptText: string): Promise<SessionAna
 
     try {
       const llmOutput = parseLLMOutput(content);
+      const normalizedRiskDetection = {
+        ...llmOutput.riskDetection,
+        requiresSupervisorReview:
+          llmOutput.riskDetection.flag === "RISK"
+            ? true
+            : llmOutput.riskDetection.requiresSupervisorReview
+      };
+      // Final DTO validation adds server-owned metadata before persistence.
       const response = SessionAnalysisSchema.parse({
         ...llmOutput,
+        riskDetection: normalizedRiskDetection,
         meta: {
           model: SESSION_ANALYSIS_MODEL,
           promptVersion: PROMPT_VERSION,

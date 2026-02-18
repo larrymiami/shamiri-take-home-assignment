@@ -23,6 +23,7 @@ type SessionListRow = {
   finalStatus: SessionStatus | null;
   analysis: {
     safetyFlag: "SAFE" | "RISK";
+    requiresSupervisorReview: boolean;
   } | null;
   fellow: {
     name: string;
@@ -33,14 +34,48 @@ type SessionMetricRow = {
   finalStatus: SessionStatus | null;
   analysis: {
     safetyFlag: "SAFE" | "RISK";
+    requiresSupervisorReview: boolean;
   } | null;
   review: {
     id: string;
   } | null;
 };
 
+function normalizeLegacyRiskTriage(resultJson: unknown): unknown {
+  if (typeof resultJson !== "object" || resultJson === null) {
+    return resultJson;
+  }
+
+  const payload = resultJson as Record<string, unknown>;
+  const riskDetectionRaw = payload["riskDetection"];
+
+  if (typeof riskDetectionRaw !== "object" || riskDetectionRaw === null) {
+    return resultJson;
+  }
+
+  const riskDetection = riskDetectionRaw as Record<string, unknown>;
+
+  if (
+    riskDetection["flag"] !== "RISK" ||
+    Object.prototype.hasOwnProperty.call(riskDetection, "requiresSupervisorReview")
+  ) {
+    return resultJson;
+  }
+
+  return {
+    ...payload,
+    riskDetection: {
+      ...riskDetection,
+      // Backward compatibility for analyses persisted before this field existed.
+      requiresSupervisorReview: true
+    }
+  };
+}
+
 function parseStoredAnalysis(resultJson: unknown): SessionAnalysisDTO | null {
-  const parsed = SessionAnalysisSchema.safeParse(resultJson);
+  // Guard against historical/invalid JSON payloads in storage.
+  const normalized = normalizeLegacyRiskTriage(resultJson);
+  const parsed = SessionAnalysisSchema.safeParse(normalized);
   return parsed.success ? parsed.data : null;
 }
 
@@ -50,6 +85,7 @@ function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput
   }
 
   if (status === "PROCESSED") {
+    // "Processed" means "not finalized by supervisor and no AI-derived SAFE/RISK yet".
     return {
       OR: [
         { finalStatus: "PROCESSED" },
@@ -61,17 +97,22 @@ function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput
   }
 
   if (status === "SAFE") {
+    // Include AI SAFE when finalStatus is still pending human review.
     return {
       OR: [
         { finalStatus: "SAFE" },
         {
-          AND: [{ finalStatus: null }, { analysis: { is: { safetyFlag: "SAFE" } } }]
+          AND: [
+            { finalStatus: null },
+            { analysis: { is: { safetyFlag: "SAFE", requiresSupervisorReview: false } } }
+          ]
         }
       ]
     };
   }
 
   if (status === "RISK") {
+    // Include AI RISK so risk filtering works before supervisor override.
     return {
       OR: [
         { finalStatus: "RISK" },
@@ -82,7 +123,17 @@ function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput
     };
   }
 
-  return { finalStatus: "FLAGGED_FOR_REVIEW" };
+  return {
+    OR: [
+      { finalStatus: "FLAGGED_FOR_REVIEW" },
+      {
+        AND: [
+          { finalStatus: null },
+          { analysis: { is: { safetyFlag: "SAFE", requiresSupervisorReview: true } } }
+        ]
+      }
+    ]
+  };
 }
 
 function buildSearchWhere(search: string): SessionWhereInput | undefined {
@@ -141,7 +192,8 @@ export async function listForSupervisor(
       finalStatus: true,
       analysis: {
         select: {
-          safetyFlag: true
+          safetyFlag: true,
+          requiresSupervisorReview: true
         }
       },
       fellow: {
@@ -160,6 +212,7 @@ export async function listForSupervisor(
   ]);
 
   return {
+    // Always return displayStatus derived with the same precedence used in filtering.
     items: sessions.map(
       (session: SessionListRow): SessionListItem => ({
         id: session.id,
@@ -168,7 +221,8 @@ export async function listForSupervisor(
         groupId: session.groupId,
         displayStatus: deriveSessionDisplayStatusFromSafetyFlag({
           finalStatus: session.finalStatus,
-          analysisSafetyFlag: session.analysis?.safetyFlag ?? null
+          analysisSafetyFlag: session.analysis?.safetyFlag ?? null,
+          analysisRequiresSupervisorReview: session.analysis?.requiresSupervisorReview ?? null
         })
       })
     ),
@@ -196,7 +250,8 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
       },
       analysis: {
         select: {
-          safetyFlag: true
+          safetyFlag: true,
+          requiresSupervisorReview: true
         }
       }
     }
@@ -210,7 +265,8 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
   for (const session of sessions) {
     const status = deriveSessionDisplayStatusFromSafetyFlag({
       finalStatus: session.finalStatus,
-      analysisSafetyFlag: session.analysis?.safetyFlag ?? null
+      analysisSafetyFlag: session.analysis?.safetyFlag ?? null,
+      analysisRequiresSupervisorReview: session.analysis?.requiresSupervisorReview ?? null
     });
 
     if (status === "RISK") {
@@ -223,6 +279,7 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
 
     if (dayjs(session.occurredAt).isSame(dayjs(), "day")) {
       todayTotal += 1;
+      // "Reviewed" means a supervisor decision exists, not just a non-null finalStatus.
       if (session.review !== null) {
         reviewedToday += 1;
       }
@@ -283,6 +340,7 @@ export async function upsertSessionAnalysis(
   sessionId: string,
   analysis: SessionAnalysisDTO
 ): Promise<SessionAnalysisDTO> {
+  // Idempotent persistence so repeated analyze calls do not duplicate rows.
   const saved = await prisma.aIAnalysis.upsert({
     where: { sessionId },
     create: {
@@ -290,6 +348,7 @@ export async function upsertSessionAnalysis(
       resultJson: analysis as unknown as AnalysisResultJsonInput,
       safetyFlag: analysis.riskDetection.flag,
       riskQuotes: analysis.riskDetection.extractedQuotes,
+      requiresSupervisorReview: analysis.riskDetection.requiresSupervisorReview,
       model: analysis.meta.model,
       promptVersion: analysis.meta.promptVersion,
       latencyMs: analysis.meta.latencyMs,
@@ -300,6 +359,7 @@ export async function upsertSessionAnalysis(
       resultJson: analysis as unknown as AnalysisResultJsonInput,
       safetyFlag: analysis.riskDetection.flag,
       riskQuotes: analysis.riskDetection.extractedQuotes,
+      requiresSupervisorReview: analysis.riskDetection.requiresSupervisorReview,
       model: analysis.meta.model,
       promptVersion: analysis.meta.promptVersion,
       latencyMs: analysis.meta.latencyMs,
@@ -393,6 +453,7 @@ export async function submitSessionReview(params: {
 }> {
   const { sessionId, supervisorId, payload } = params;
 
+  // Keep Session.finalStatus and SupervisorReview atomically consistent.
   const [, review] = await prisma.$transaction([
     prisma.session.update({
       where: { id: sessionId },

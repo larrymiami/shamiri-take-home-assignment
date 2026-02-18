@@ -1,6 +1,7 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
+// Centralized runtime env contract so invalid deploy config fails fast at startup.
 export const env = createEnv({
   server: {
     DATABASE_URL: z.url(),

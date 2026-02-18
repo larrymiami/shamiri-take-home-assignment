@@ -30,6 +30,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const page = parsePositiveInt(params.page, 1);
   const search = params.q?.trim() ?? "";
   const status = parseSessionStatusFilter(params.status);
+  // Fetch independent dashboard slices in parallel to minimize TTFB.
   const [sessionList, fellowsAssigned, metrics] = await Promise.all([
     listForSupervisor(session.user.id, {
       page,

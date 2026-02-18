@@ -15,7 +15,7 @@ const threeSentenceSummarySchema = z
 
     if (sentenceCount !== 3) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "sessionSummary must be exactly 3 sentences"
       });
     }
@@ -35,12 +35,13 @@ const riskDetectionSchema = z
   .object({
     flag: z.enum(["SAFE", "RISK"]),
     rationale: z.string().min(10),
-    extractedQuotes: z.array(z.string().min(8)).max(3)
+    extractedQuotes: z.array(z.string().min(8)).max(3),
+    requiresSupervisorReview: z.boolean().default(false)
   })
   .superRefine((value, ctx) => {
     if (value.flag === "RISK" && value.extractedQuotes.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["extractedQuotes"],
         message: "RISK requires at least one extracted quote"
       });
@@ -48,9 +49,17 @@ const riskDetectionSchema = z
 
     if (value.flag === "SAFE" && value.extractedQuotes.length > 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["extractedQuotes"],
         message: "SAFE must not include extracted risk quotes"
+      });
+    }
+
+    if (value.flag === "RISK" && !value.requiresSupervisorReview) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requiresSupervisorReview"],
+        message: "RISK must require supervisor review"
       });
     }
   });
@@ -69,10 +78,11 @@ export const SessionAnalysisLLMOutputSchema = z.object({
   riskDetection: riskDetectionSchema
 });
 
+// Meta is persisted for auditability and prompt/model quality tracking over time.
 export const SessionAnalysisMetaSchema = z.object({
   model: z.string().min(1),
   promptVersion: z.string().min(1),
-  generatedAt: z.string().datetime(),
+  generatedAt: z.iso.datetime(),
   latencyMs: z.number().int().positive().optional(),
   transcriptCharsSent: z.number().int().positive().optional(),
   transcriptWasTruncated: z.boolean().optional(),
@@ -87,6 +97,7 @@ export const SessionAnalysisSchema = SessionAnalysisLLMOutputSchema.extend({
 const llmOutputJsonSchema = z.toJSONSchema(SessionAnalysisLLMOutputSchema);
 delete llmOutputJsonSchema.$schema;
 
+// JSON Schema is derived from Zod to keep one canonical contract source.
 export const SessionAnalysisLLMOutputJSONSchema = llmOutputJsonSchema;
 
 export type SessionAnalysisLLMOutput = z.infer<typeof SessionAnalysisLLMOutputSchema>;

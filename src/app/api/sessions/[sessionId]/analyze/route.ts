@@ -35,6 +35,7 @@ export async function POST(_request: Request, context: AnalyzeRouteContext) {
 
   const existingAnalysis = await getSessionAnalysisBySessionId(sessionId);
 
+  // Idempotent endpoint: return existing analysis instead of re-running model calls.
   if (existingAnalysis) {
     return NextResponse.json(existingAnalysis);
   }
@@ -49,6 +50,7 @@ export async function POST(_request: Request, context: AnalyzeRouteContext) {
     const analysis = await analyzeSession(session.transcriptText);
     const savedAnalysis = await upsertSessionAnalysis(sessionId, analysis);
 
+    // Refresh dashboard counts and detail sidebar after analysis generation.
     revalidatePath("/dashboard");
     revalidatePath(`/sessions/${sessionId}`);
 

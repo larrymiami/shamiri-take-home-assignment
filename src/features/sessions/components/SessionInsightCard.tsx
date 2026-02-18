@@ -24,6 +24,7 @@ export function SessionInsightCard({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // If human review already exists, status should be interpreted as human-owned even without AI.
   const hasHumanStatus = Boolean(finalStatus || hasReview);
 
   const handleAnalyze = async () => {

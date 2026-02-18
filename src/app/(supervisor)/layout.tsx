@@ -11,6 +11,7 @@ export default async function SupervisorLayout({ children }: SupervisorLayoutPro
 
   return (
     <Stack spacing={0}>
+      {/* Layout-level auth gate keeps all supervisor pages behind the same contract. */}
       <TopBar name={session.user.name ?? "Supervisor"} email={session.user.email ?? ""} />
       <Container maxWidth="xl" sx={{ py: { xs: 2, md: 3 } }}>
         <Stack spacing={2.5}>{children}</Stack>

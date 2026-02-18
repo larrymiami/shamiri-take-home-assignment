@@ -12,6 +12,7 @@ interface SessionDetailPageProps {
 export default async function SessionDetailPage({ params }: SessionDetailPageProps) {
   const authSession = await requireSupervisorSession();
   const { sessionId } = await params;
+  // Repository fetch is already scoped by supervisor to enforce ownership.
   const detail = await getSessionDetailForSupervisor(authSession.user.id, sessionId);
 
   if (!detail) {
