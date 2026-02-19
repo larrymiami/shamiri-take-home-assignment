@@ -6,7 +6,7 @@ import {
   submitSessionReview
 } from "@/features/sessions/server/sessions.repository";
 import { getCurrentSession } from "@/server/auth/session";
-import { REVIEW_DECISION_VALUES, SESSION_STATUS_VALUES } from "@/server/types/domain";
+import { FINAL_REVIEW_STATUS_VALUES, REVIEW_DECISION_VALUES } from "@/server/types/domain";
 
 interface ReviewRouteContext {
   params: Promise<{
@@ -17,7 +17,7 @@ interface ReviewRouteContext {
 const SupervisorReviewInputSchema = z
   .object({
     decision: z.enum(REVIEW_DECISION_VALUES),
-    finalStatus: z.enum(SESSION_STATUS_VALUES),
+    finalStatus: z.enum(FINAL_REVIEW_STATUS_VALUES),
     note: z
       .string()
       .max(1000, "Note cannot exceed 1000 characters")

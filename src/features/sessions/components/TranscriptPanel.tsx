@@ -198,13 +198,13 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
         <Box
           key={entry.id}
           sx={{
-            px: { xs: 2, md: 2.5 },
-            py: { xs: 1.5, md: 1.9 },
+            px: { xs: 2.35, md: 2.5 },
+            py: { xs: 1.8, md: 1.9 },
             backgroundColor: entry.highlighted ? "var(--shamiri-red-bg)" : "transparent",
             ...(entry.highlighted
               ? {
-                  mx: { xs: 1, md: 1.25 },
-                  my: 0.6,
+                  mx: { xs: 1.15, md: 1.25 },
+                  my: 0.8,
                   borderRadius: 2,
                   borderLeft: "4px solid",
                   borderLeftColor: "error.main"
@@ -212,11 +212,11 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
               : null)
           }}
         >
-          <Stack direction="row" spacing={1.75} alignItems="flex-start">
+          <Stack direction="row" spacing={2} alignItems="flex-start">
             <Stack
               sx={{
-                width: { xs: 48, md: 54 },
-                minWidth: { xs: 48, md: 54 },
+                width: { xs: 52, md: 54 },
+                minWidth: { xs: 52, md: 54 },
                 pt: 0.2,
                 color: entry.highlighted ? "error.main" : "text.disabled"
               }}
@@ -227,7 +227,7 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
                   fontWeight: 800,
                   color: "inherit",
                   letterSpacing: 0.35,
-                  fontSize: { xs: 10, md: 10.5 }
+                  fontSize: { xs: 10.5, md: 10.5 }
                 }}
               >
                 {entry.timestampLabel}
@@ -241,10 +241,10 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
                   display: "inline-block",
                   alignSelf: "flex-start",
                   px: 1,
-                  py: 0.25,
+                  py: 0.3,
                   borderRadius: 999,
                   mb: 0.35,
-                  fontSize: { xs: 9, md: 10 },
+                  fontSize: { xs: 9.5, md: 10 },
                   fontWeight: 800,
                   textTransform: "uppercase",
                   letterSpacing: 0.25,
@@ -255,8 +255,8 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
               </Box>
               <Typography
                 sx={{
-                  fontSize: { xs: 13, md: 14 },
-                  lineHeight: { xs: 1.5, md: 1.55 },
+                  fontSize: { xs: 13.5, md: 14 },
+                  lineHeight: { xs: 1.6, md: 1.55 },
                   color: "primary.main",
                   fontStyle: entry.highlighted ? "italic" : "normal"
                 }}
@@ -274,9 +274,10 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
     <Card sx={{ borderRadius: 3, backgroundColor: "common.white" }}>
       <CardContent sx={{ p: 0 }}>
         <Stack
-          direction="row"
+          direction={{ xs: "column", md: "row" }}
           justifyContent="space-between"
-          alignItems="center"
+          alignItems={{ xs: "flex-start", md: "center" }}
+          spacing={{ xs: 0.75, md: 0 }}
           sx={{
             px: { xs: 2, md: 2.5 },
             py: { xs: 1.2, md: 1.35 },
@@ -291,7 +292,13 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
               Full Transcript
             </Typography>
           </Stack>
-          <Stack direction="row" spacing={1.5} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1.5}
+            alignItems="center"
+            justifyContent={{ xs: "space-between", md: "flex-end" }}
+            sx={{ width: { xs: "100%", md: "auto" } }}
+          >
             <Typography
               variant="body2"
               color="text.secondary"
@@ -307,7 +314,10 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
               startIcon={<DownloadRoundedIcon fontSize="small" />}
               sx={{
                 color: "primary.main",
-                textTransform: "none"
+                textTransform: "none",
+                px: { xs: 0.25, md: 0.75 },
+                minWidth: "auto",
+                fontSize: { xs: 12, md: 13 }
               }}
             >
               Download CSV
@@ -318,24 +328,27 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
         <Divider />
 
         <Stack
-          direction="row"
-          justifyContent="space-between"
+          spacing={1.1}
           alignItems="center"
-          sx={{ px: { xs: 2, md: 2.5 }, py: 1, display: { xs: "flex", md: "none" } }}
+          sx={{ px: { xs: 2.2, md: 2.5 }, py: 2.1, display: { xs: "flex", md: "none" } }}
         >
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ textAlign: "center", maxWidth: 280, lineHeight: 1.5, fontWeight: 600 }}
+          >
             Hidden by default on mobile for faster review flow.
           </Typography>
           <Button
             onClick={() => {
               setIsMobileTranscriptOpen((value) => !value);
             }}
-            size="small"
+            size="medium"
             variant="text"
             startIcon={
               isMobileTranscriptOpen ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />
             }
-            sx={{ textTransform: "none", fontWeight: 700 }}
+            sx={{ textTransform: "none", fontWeight: 800, fontSize: 15 }}
           >
             {isMobileTranscriptOpen ? "Hide Transcript" : "Show Transcript"}
           </Button>

@@ -16,29 +16,12 @@ type SessionFindManyArgs = NonNullable<Parameters<typeof prisma.session.findMany
 type SessionWhereInput = NonNullable<SessionFindManyArgs["where"]>;
 type AnalysisUpsertArgs = NonNullable<Parameters<typeof prisma.aIAnalysis.upsert>[0]>;
 type AnalysisResultJsonInput = AnalysisUpsertArgs["create"]["resultJson"];
-type SessionListRow = {
+type SessionListRawRow = {
   id: string;
+  fellowName: string;
   groupId: string;
-  occurredAt: Date;
-  finalStatus: SessionStatus | null;
-  analysis: {
-    safetyFlag: "SAFE" | "RISK";
-    requiresSupervisorReview: boolean;
-  } | null;
-  fellow: {
-    name: string;
-  };
-};
-type SessionMetricRow = {
-  occurredAt: Date;
-  finalStatus: SessionStatus | null;
-  analysis: {
-    safetyFlag: "SAFE" | "RISK";
-    requiresSupervisorReview: boolean;
-  } | null;
-  review: {
-    id: string;
-  } | null;
+  occurredAt: Date | string;
+  displayStatus: SessionStatus;
 };
 
 function normalizeLegacyRiskTriage(resultJson: unknown): unknown {
@@ -79,153 +62,115 @@ function parseStoredAnalysis(resultJson: unknown): SessionAnalysisDTO | null {
   return parsed.success ? parsed.data : null;
 }
 
-function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput | undefined {
-  if (status === "ALL") {
-    return undefined;
-  }
-
-  if (status === "PROCESSED") {
-    // "Processed" means "not finalized by supervisor and no AI-derived SAFE/RISK yet".
-    return {
-      OR: [
-        { finalStatus: "PROCESSED" },
-        {
-          AND: [{ finalStatus: null }, { analysis: { is: null } }]
-        }
-      ]
-    };
-  }
-
-  if (status === "SAFE") {
-    // Include AI SAFE when finalStatus is still pending human review.
-    return {
-      OR: [
-        { finalStatus: "SAFE" },
-        {
-          AND: [
-            { finalStatus: null },
-            { analysis: { is: { safetyFlag: "SAFE", requiresSupervisorReview: false } } }
-          ]
-        }
-      ]
-    };
-  }
-
-  if (status === "RISK") {
-    // Include AI RISK so risk filtering works before supervisor override.
-    return {
-      OR: [
-        { finalStatus: "RISK" },
-        {
-          AND: [{ finalStatus: null }, { analysis: { is: { safetyFlag: "RISK" } } }]
-        }
-      ]
-    };
-  }
-
-  return {
-    OR: [
-      { finalStatus: "FLAGGED_FOR_REVIEW" },
-      {
-        AND: [
-          { finalStatus: null },
-          { analysis: { is: { safetyFlag: "SAFE", requiresSupervisorReview: true } } }
-        ]
-      }
-    ]
-  };
-}
-
-function buildSearchWhere(search: string): SessionWhereInput | undefined {
-  const term = search.trim();
-
-  if (!term) {
-    return undefined;
-  }
-
-  return {
-    OR: [
-      { groupId: { contains: term, mode: "insensitive" } },
-      { fellow: { name: { contains: term, mode: "insensitive" } } }
-    ]
-  };
-}
-
-function buildListWhere(supervisorId: string, query: SessionListQuery): SessionWhereInput {
-  const where: SessionWhereInput = { supervisorId };
-  const conditions: SessionWhereInput[] = [];
-  const statusWhere = buildStatusWhere(query.status);
-  const searchWhere = buildSearchWhere(query.search);
-
-  if (statusWhere) {
-    conditions.push(statusWhere);
-  }
-
-  if (searchWhere) {
-    conditions.push(searchWhere);
-  }
-
-  if (conditions.length > 0) {
-    where.AND = conditions;
-  }
-
-  return where;
-}
-
 export async function listForSupervisor(
   supervisorId: string,
   query: SessionListQuery
 ): Promise<SessionListResult> {
   const safePage = Math.max(1, query.page);
   const safePageSize = Math.max(1, query.pageSize);
-  const where = buildListWhere(supervisorId, query);
+  const offset = (safePage - 1) * safePageSize;
+  const searchTerm = query.search.trim();
+  const escapedSearchTerm = searchTerm
+    .replaceAll("\\", "\\\\")
+    .replaceAll("%", "\\%")
+    .replaceAll("_", "\\_");
+  const searchPattern = `%${escapedSearchTerm}%`;
+  const statusFilter = query.status;
 
-  const sessionsPromise = prisma.session.findMany({
-    where,
-    orderBy: { occurredAt: "desc" },
-    skip: (safePage - 1) * safePageSize,
-    take: safePageSize,
-    select: {
-      id: true,
-      groupId: true,
-      occurredAt: true,
-      finalStatus: true,
-      analysis: {
-        select: {
-          safetyFlag: true,
-          requiresSupervisorReview: true
-        }
-      },
-      fellow: {
-        select: {
-          name: true
-        }
-      }
-    }
-  }) as Promise<SessionListRow[]>;
+  const countRows = await prisma.$queryRaw<Array<{ count: number }>>`
+WITH base AS (
+  SELECT
+    s.id,
+    CASE
+      WHEN s."finalStatus" IS NOT NULL AND s."finalStatus" <> 'PROCESSED' THEN s."finalStatus"::text
+      WHEN a."safetyFlag" = 'RISK' THEN 'RISK'
+      WHEN a."safetyFlag" = 'SAFE' AND a."requiresSupervisorReview" = true THEN 'FLAGGED_FOR_REVIEW'
+      WHEN a."safetyFlag" = 'SAFE' THEN 'SAFE'
+      ELSE 'PROCESSED'
+    END AS "displayStatus"
+  FROM "Session" s
+  INNER JOIN "Fellow" f ON f.id = s."fellowId"
+  LEFT JOIN "AIAnalysis" a ON a."sessionId" = s.id
+  WHERE s."supervisorId" = ${supervisorId}
+    AND (
+      ${searchTerm} = ''
+      OR s."groupId" ILIKE ${searchPattern} ESCAPE '\'
+      OR f."name" ILIKE ${searchPattern} ESCAPE '\'
+    )
+)
+SELECT COUNT(*)::int AS "count"
+FROM base
+WHERE (${statusFilter} = 'ALL' OR "displayStatus" = ${statusFilter})
+`;
 
-  const totalCountPromise = prisma.session.count({ where });
+  const [{ count: totalCount } = { count: 0 }] = countRows;
 
-  const [sessions, totalCount]: [SessionListRow[], number] = await Promise.all([
-    sessionsPromise,
-    totalCountPromise
-  ]);
+  if (totalCount === 0) {
+    return {
+      items: [],
+      page: safePage,
+      pageSize: safePageSize,
+      totalCount: 0
+    };
+  }
+
+  const rows = await prisma.$queryRaw<SessionListRawRow[]>`
+WITH base AS (
+  SELECT
+    s.id,
+    f."name" AS "fellowName",
+    s."groupId",
+    s."occurredAt",
+    CASE
+      WHEN s."finalStatus" IS NOT NULL AND s."finalStatus" <> 'PROCESSED' THEN s."finalStatus"::text
+      WHEN a."safetyFlag" = 'RISK' THEN 'RISK'
+      WHEN a."safetyFlag" = 'SAFE' AND a."requiresSupervisorReview" = true THEN 'FLAGGED_FOR_REVIEW'
+      WHEN a."safetyFlag" = 'SAFE' THEN 'SAFE'
+      ELSE 'PROCESSED'
+    END AS "displayStatus"
+  FROM "Session" s
+  INNER JOIN "Fellow" f ON f.id = s."fellowId"
+  LEFT JOIN "AIAnalysis" a ON a."sessionId" = s.id
+  WHERE s."supervisorId" = ${supervisorId}
+    AND (
+      ${searchTerm} = ''
+      OR s."groupId" ILIKE ${searchPattern} ESCAPE '\'
+      OR f."name" ILIKE ${searchPattern} ESCAPE '\'
+    )
+)
+SELECT
+  id,
+  "fellowName",
+  "groupId",
+  "occurredAt",
+  "displayStatus"
+FROM base
+WHERE (${statusFilter} = 'ALL' OR "displayStatus" = ${statusFilter})
+ORDER BY
+  CASE "displayStatus"
+    WHEN 'RISK' THEN 0
+    WHEN 'FLAGGED_FOR_REVIEW' THEN 1
+    WHEN 'SAFE' THEN 2
+    ELSE 3
+  END,
+  "occurredAt" DESC
+LIMIT ${safePageSize}
+OFFSET ${offset}
+`;
+
+  const items: SessionListItem[] = rows.map((row) => ({
+    id: row.id,
+    fellowName: row.fellowName,
+    occurredAt:
+      row.occurredAt instanceof Date
+        ? row.occurredAt.toISOString()
+        : new Date(row.occurredAt).toISOString(),
+    groupId: row.groupId,
+    displayStatus: row.displayStatus
+  }));
 
   return {
-    // Always return displayStatus derived with the same precedence used in filtering.
-    items: sessions.map(
-      (session: SessionListRow): SessionListItem => ({
-        id: session.id,
-        fellowName: session.fellow.name,
-        occurredAt: session.occurredAt.toISOString(),
-        groupId: session.groupId,
-        displayStatus: deriveSessionDisplayStatusFromSafetyFlag({
-          finalStatus: session.finalStatus,
-          analysisSafetyFlag: session.analysis?.safetyFlag ?? null,
-          analysisRequiresSupervisorReview: session.analysis?.requiresSupervisorReview ?? null
-        })
-      })
-    ),
+    items,
     page: safePage,
     pageSize: safePageSize,
     totalCount
@@ -238,53 +183,64 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
   reviewedToday: number;
   todayTotal: number;
 }> {
-  const sessions: SessionMetricRow[] = (await prisma.session.findMany({
-    where: { supervisorId },
-    select: {
-      occurredAt: true,
-      finalStatus: true,
-      review: {
-        select: {
-          id: true
-        }
-      },
-      analysis: {
-        select: {
-          safetyFlag: true,
-          requiresSupervisorReview: true
+  const pendingFinalStatusWhere: SessionWhereInput = {
+    OR: [{ finalStatus: null }, { finalStatus: "PROCESSED" }]
+  };
+  const todayStart = dayjs().startOf("day").toDate();
+  const todayEndExclusive = dayjs().add(1, "day").startOf("day").toDate();
+
+  const [riskCount, sessionsNeedingReview, reviewedToday, todayTotal] = await Promise.all([
+    prisma.session.count({
+      where: {
+        supervisorId,
+        OR: [
+          { finalStatus: "RISK" },
+          {
+            AND: [pendingFinalStatusWhere, { analysis: { is: { safetyFlag: "RISK" } } }]
+          }
+        ]
+      }
+    }),
+    prisma.session.count({
+      where: {
+        supervisorId,
+        OR: [
+          { finalStatus: "RISK" },
+          { finalStatus: "FLAGGED_FOR_REVIEW" },
+          {
+            AND: [pendingFinalStatusWhere, { analysis: { is: { safetyFlag: "RISK" } } }]
+          },
+          {
+            AND: [
+              pendingFinalStatusWhere,
+              { analysis: { is: { safetyFlag: "SAFE", requiresSupervisorReview: true } } }
+            ]
+          }
+        ]
+      }
+    }),
+    prisma.supervisorReview.count({
+      where: {
+        supervisorId,
+        session: {
+          supervisorId,
+          occurredAt: {
+            gte: todayStart,
+            lt: todayEndExclusive
+          }
         }
       }
-    }
-  })) as SessionMetricRow[];
-
-  let riskCount = 0;
-  let sessionsNeedingReview = 0;
-  let reviewedToday = 0;
-  let todayTotal = 0;
-
-  for (const session of sessions) {
-    const status = deriveSessionDisplayStatusFromSafetyFlag({
-      finalStatus: session.finalStatus,
-      analysisSafetyFlag: session.analysis?.safetyFlag ?? null,
-      analysisRequiresSupervisorReview: session.analysis?.requiresSupervisorReview ?? null
-    });
-
-    if (status === "RISK") {
-      riskCount += 1;
-    }
-
-    if (status === "RISK" || status === "FLAGGED_FOR_REVIEW") {
-      sessionsNeedingReview += 1;
-    }
-
-    if (dayjs(session.occurredAt).isSame(dayjs(), "day")) {
-      todayTotal += 1;
-      // "Reviewed" means a supervisor decision exists, not just a non-null finalStatus.
-      if (session.review !== null) {
-        reviewedToday += 1;
+    }),
+    prisma.session.count({
+      where: {
+        supervisorId,
+        occurredAt: {
+          gte: todayStart,
+          lt: todayEndExclusive
+        }
       }
-    }
-  }
+    })
+  ]);
 
   return {
     riskCount,
@@ -430,6 +386,172 @@ export async function getSessionDetailForSupervisor(
     transcriptText: session.transcriptText,
     finalStatus: session.finalStatus,
     analysis: analysis ?? undefined,
+    review: session.review
+      ? {
+          decision: session.review.decision,
+          finalStatus: session.review.finalStatus,
+          note: session.review.note,
+          updatedAt: session.review.updatedAt.toISOString()
+        }
+      : undefined
+  };
+}
+
+export async function canSupervisorAccessSession(
+  supervisorId: string,
+  sessionId: string
+): Promise<boolean> {
+  const session = await prisma.session.findFirst({
+    where: {
+      id: sessionId,
+      supervisorId
+    },
+    select: {
+      id: true
+    }
+  });
+
+  return Boolean(session);
+}
+
+export async function getSessionHeaderForSupervisor(
+  supervisorId: string,
+  sessionId: string
+): Promise<{
+  id: string;
+  fellowName: string;
+  occurredAt: string;
+  groupId: string;
+  finalStatus: SessionStatus | null;
+  displayStatus: SessionStatus;
+} | null> {
+  const session = await prisma.session.findFirst({
+    where: {
+      id: sessionId,
+      supervisorId
+    },
+    select: {
+      id: true,
+      groupId: true,
+      occurredAt: true,
+      finalStatus: true,
+      fellow: {
+        select: {
+          name: true
+        }
+      },
+      analysis: {
+        select: {
+          safetyFlag: true,
+          requiresSupervisorReview: true
+        }
+      }
+    }
+  });
+
+  if (!session) {
+    return null;
+  }
+
+  return {
+    id: session.id,
+    fellowName: session.fellow.name,
+    occurredAt: session.occurredAt.toISOString(),
+    groupId: session.groupId,
+    finalStatus: session.finalStatus,
+    displayStatus: deriveSessionDisplayStatusFromSafetyFlag({
+      finalStatus: session.finalStatus,
+      analysisSafetyFlag: session.analysis?.safetyFlag ?? null,
+      analysisRequiresSupervisorReview: session.analysis?.requiresSupervisorReview ?? null
+    })
+  };
+}
+
+export async function getSessionTranscriptForSupervisor(
+  supervisorId: string,
+  sessionId: string
+): Promise<{
+  transcriptText: string;
+  highlightedQuotes: string[];
+} | null> {
+  const session = await prisma.session.findFirst({
+    where: {
+      id: sessionId,
+      supervisorId
+    },
+    select: {
+      transcriptText: true,
+      analysis: {
+        select: {
+          resultJson: true
+        }
+      }
+    }
+  });
+
+  if (!session) {
+    return null;
+  }
+
+  const analysis = session.analysis ? parseStoredAnalysis(session.analysis.resultJson) : null;
+
+  return {
+    transcriptText: session.transcriptText,
+    highlightedQuotes: analysis?.riskDetection.extractedQuotes ?? []
+  };
+}
+
+export async function getSessionInsightsForSupervisor(
+  supervisorId: string,
+  sessionId: string
+): Promise<{
+  id: string;
+  finalStatus: SessionStatus | null;
+  displayStatus: SessionStatus;
+  analysis?: SessionAnalysisDTO;
+  review?: SessionDetailDTO["review"];
+} | null> {
+  const session = await prisma.session.findFirst({
+    where: {
+      id: sessionId,
+      supervisorId
+    },
+    select: {
+      id: true,
+      finalStatus: true,
+      analysis: {
+        select: {
+          resultJson: true,
+          safetyFlag: true,
+          requiresSupervisorReview: true
+        }
+      },
+      review: {
+        select: {
+          decision: true,
+          finalStatus: true,
+          note: true,
+          updatedAt: true
+        }
+      }
+    }
+  });
+
+  if (!session) {
+    return null;
+  }
+
+  const parsedAnalysis = session.analysis ? parseStoredAnalysis(session.analysis.resultJson) : null;
+
+  return {
+    id: session.id,
+    finalStatus: session.finalStatus,
+    displayStatus: deriveSessionDisplayStatusFromSafetyFlag({
+      finalStatus: session.finalStatus,
+      analysisSafetyFlag: session.analysis?.safetyFlag ?? null,
+      analysisRequiresSupervisorReview: session.analysis?.requiresSupervisorReview ?? null
+    }),
+    analysis: parsedAnalysis ?? undefined,
     review: session.review
       ? {
           decision: session.review.decision,

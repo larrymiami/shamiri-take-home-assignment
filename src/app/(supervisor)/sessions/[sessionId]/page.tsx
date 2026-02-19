@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { SessionDetailView } from "@/features/sessions/components/SessionDetailView";
-import { getSessionDetailForSupervisor } from "@/features/sessions/server/sessions.repository";
+import { canSupervisorAccessSession } from "@/features/sessions/server/sessions.repository";
 import { requireSupervisorSession } from "@/server/auth/session";
 
 interface SessionDetailPageProps {
@@ -12,12 +12,11 @@ interface SessionDetailPageProps {
 export default async function SessionDetailPage({ params }: SessionDetailPageProps) {
   const authSession = await requireSupervisorSession();
   const { sessionId } = await params;
-  // Repository fetch is already scoped by supervisor to enforce ownership.
-  const detail = await getSessionDetailForSupervisor(authSession.user.id, sessionId);
+  const hasSessionAccess = await canSupervisorAccessSession(authSession.user.id, sessionId);
 
-  if (!detail) {
+  if (!hasSessionAccess) {
     notFound();
   }
 
-  return <SessionDetailView session={detail} />;
+  return <SessionDetailView sessionId={sessionId} supervisorId={authSession.user.id} />;
 }

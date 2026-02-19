@@ -14,6 +14,16 @@ describe("session display status derivation", () => {
     ).toBe("SAFE");
   });
 
+  it("treats legacy PROCESSED finalStatus as pending and derives from AI", () => {
+    expect(
+      deriveSessionDisplayStatusFromSafetyFlag({
+        finalStatus: "PROCESSED",
+        analysisSafetyFlag: "SAFE",
+        analysisRequiresSupervisorReview: false
+      })
+    ).toBe("SAFE");
+  });
+
   it("maps AI risk to RISK when no human status exists", () => {
     expect(
       deriveSessionDisplayStatusFromSafetyFlag({
