@@ -83,27 +83,25 @@ function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput
   if (status === "ALL") {
     return undefined;
   }
+  const pendingFinalStatusWhere: SessionWhereInput = {
+    OR: [{ finalStatus: null }, { finalStatus: "PROCESSED" }]
+  };
 
   if (status === "PROCESSED") {
-    // "Processed" means "not finalized by supervisor and no AI-derived SAFE/RISK yet".
+    // "Processed" means "pending supervisor finalization and no AI-derived status yet".
     return {
-      OR: [
-        { finalStatus: "PROCESSED" },
-        {
-          AND: [{ finalStatus: null }, { analysis: { is: null } }]
-        }
-      ]
+      AND: [pendingFinalStatusWhere, { analysis: { is: null } }]
     };
   }
 
   if (status === "SAFE") {
-    // Include AI SAFE when finalStatus is still pending human review.
+    // Include AI SAFE when final status is still pending human review.
     return {
       OR: [
         { finalStatus: "SAFE" },
         {
           AND: [
-            { finalStatus: null },
+            pendingFinalStatusWhere,
             { analysis: { is: { safetyFlag: "SAFE", requiresSupervisorReview: false } } }
           ]
         }
@@ -117,7 +115,7 @@ function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput
       OR: [
         { finalStatus: "RISK" },
         {
-          AND: [{ finalStatus: null }, { analysis: { is: { safetyFlag: "RISK" } } }]
+          AND: [pendingFinalStatusWhere, { analysis: { is: { safetyFlag: "RISK" } } }]
         }
       ]
     };
@@ -128,7 +126,7 @@ function buildStatusWhere(status: SessionListQuery["status"]): SessionWhereInput
       { finalStatus: "FLAGGED_FOR_REVIEW" },
       {
         AND: [
-          { finalStatus: null },
+          pendingFinalStatusWhere,
           { analysis: { is: { safetyFlag: "SAFE", requiresSupervisorReview: true } } }
         ]
       }
@@ -439,6 +437,172 @@ export async function getSessionDetailForSupervisor(
     transcriptText: session.transcriptText,
     finalStatus: session.finalStatus,
     analysis: analysis ?? undefined,
+    review: session.review
+      ? {
+          decision: session.review.decision,
+          finalStatus: session.review.finalStatus,
+          note: session.review.note,
+          updatedAt: session.review.updatedAt.toISOString()
+        }
+      : undefined
+  };
+}
+
+export async function canSupervisorAccessSession(
+  supervisorId: string,
+  sessionId: string
+): Promise<boolean> {
+  const session = await prisma.session.findFirst({
+    where: {
+      id: sessionId,
+      supervisorId
+    },
+    select: {
+      id: true
+    }
+  });
+
+  return Boolean(session);
+}
+
+export async function getSessionHeaderForSupervisor(
+  supervisorId: string,
+  sessionId: string
+): Promise<{
+  id: string;
+  fellowName: string;
+  occurredAt: string;
+  groupId: string;
+  finalStatus: SessionStatus | null;
+  displayStatus: SessionStatus;
+} | null> {
+  const session = await prisma.session.findFirst({
+    where: {
+      id: sessionId,
+      supervisorId
+    },
+    select: {
+      id: true,
+      groupId: true,
+      occurredAt: true,
+      finalStatus: true,
+      fellow: {
+        select: {
+          name: true
+        }
+      },
+      analysis: {
+        select: {
+          safetyFlag: true,
+          requiresSupervisorReview: true
+        }
+      }
+    }
+  });
+
+  if (!session) {
+    return null;
+  }
+
+  return {
+    id: session.id,
+    fellowName: session.fellow.name,
+    occurredAt: session.occurredAt.toISOString(),
+    groupId: session.groupId,
+    finalStatus: session.finalStatus,
+    displayStatus: deriveSessionDisplayStatusFromSafetyFlag({
+      finalStatus: session.finalStatus,
+      analysisSafetyFlag: session.analysis?.safetyFlag ?? null,
+      analysisRequiresSupervisorReview: session.analysis?.requiresSupervisorReview ?? null
+    })
+  };
+}
+
+export async function getSessionTranscriptForSupervisor(
+  supervisorId: string,
+  sessionId: string
+): Promise<{
+  transcriptText: string;
+  highlightedQuotes: string[];
+} | null> {
+  const session = await prisma.session.findFirst({
+    where: {
+      id: sessionId,
+      supervisorId
+    },
+    select: {
+      transcriptText: true,
+      analysis: {
+        select: {
+          resultJson: true
+        }
+      }
+    }
+  });
+
+  if (!session) {
+    return null;
+  }
+
+  const analysis = session.analysis ? parseStoredAnalysis(session.analysis.resultJson) : null;
+
+  return {
+    transcriptText: session.transcriptText,
+    highlightedQuotes: analysis?.riskDetection.extractedQuotes ?? []
+  };
+}
+
+export async function getSessionInsightsForSupervisor(
+  supervisorId: string,
+  sessionId: string
+): Promise<{
+  id: string;
+  finalStatus: SessionStatus | null;
+  displayStatus: SessionStatus;
+  analysis?: SessionAnalysisDTO;
+  review?: SessionDetailDTO["review"];
+} | null> {
+  const session = await prisma.session.findFirst({
+    where: {
+      id: sessionId,
+      supervisorId
+    },
+    select: {
+      id: true,
+      finalStatus: true,
+      analysis: {
+        select: {
+          resultJson: true,
+          safetyFlag: true,
+          requiresSupervisorReview: true
+        }
+      },
+      review: {
+        select: {
+          decision: true,
+          finalStatus: true,
+          note: true,
+          updatedAt: true
+        }
+      }
+    }
+  });
+
+  if (!session) {
+    return null;
+  }
+
+  const parsedAnalysis = session.analysis ? parseStoredAnalysis(session.analysis.resultJson) : null;
+
+  return {
+    id: session.id,
+    finalStatus: session.finalStatus,
+    displayStatus: deriveSessionDisplayStatusFromSafetyFlag({
+      finalStatus: session.finalStatus,
+      analysisSafetyFlag: session.analysis?.safetyFlag ?? null,
+      analysisRequiresSupervisorReview: session.analysis?.requiresSupervisorReview ?? null
+    }),
+    analysis: parsedAnalysis ?? undefined,
     review: session.review
       ? {
           decision: session.review.decision,

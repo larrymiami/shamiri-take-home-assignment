@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import dayjs from "dayjs";
+import { useEffect, useState } from "react";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import {
   Box,
@@ -122,6 +123,18 @@ export function SessionsTable({
   query,
   status
 }: SessionsTableProps) {
+  const [queryInput, setQueryInput] = useState(query);
+  const [statusInput, setStatusInput] = useState<SessionStatusFilter>(status);
+
+  useEffect(() => {
+    setQueryInput(query);
+  }, [query]);
+
+  useEffect(() => {
+    setStatusInput(status);
+  }, [status]);
+
+  const hasActiveFilters = query.trim().length > 0 || status !== "ALL";
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   return (
@@ -147,7 +160,8 @@ export function SessionsTable({
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
                 <TextField
                   name="q"
-                  defaultValue={query}
+                  value={queryInput}
+                  onChange={(event) => setQueryInput(event.target.value)}
                   placeholder="Filter by Fellow or Group ID"
                   size="small"
                   sx={{ minWidth: { sm: 260 } }}
@@ -165,7 +179,8 @@ export function SessionsTable({
                   name="status"
                   select
                   size="small"
-                  defaultValue={status}
+                  value={statusInput}
+                  onChange={(event) => setStatusInput(event.target.value as SessionStatusFilter)}
                   sx={{ minWidth: 160 }}
                   slotProps={{ select: { displayEmpty: true } }}
                 >
@@ -215,141 +230,205 @@ export function SessionsTable({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {sessions.map((session) => {
-                  const action = actionStyles(session.displayStatus);
-                  return (
-                    <TableRow key={session.id} hover>
-                      <TableCell>
-                        <Stack spacing={0.25}>
-                          <Typography sx={{ fontWeight: 700 }}>{session.fellowName}</Typography>
-                        </Stack>
-                      </TableCell>
-                      <TableCell sx={{ whiteSpace: "nowrap" }}>
-                        {formatDate(session.occurredAt)}
-                      </TableCell>
-                      <TableCell>{session.groupId}</TableCell>
-                      <TableCell>
-                        <SessionStatusChip status={session.displayStatus} />
-                      </TableCell>
-                      <TableCell align="right">
-                        <Link
-                          href={`/sessions/${session.id}`}
-                          style={{ textDecoration: "none", display: "inline-block" }}
-                        >
-                          <Button
-                            variant={action.variant}
-                            sx={{
-                              minWidth: 96,
-                              fontWeight: 800,
-                              ...action.sx
-                            }}
+                {sessions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5}>
+                      <Stack py={5} spacing={1.25} alignItems="center">
+                        <Typography sx={{ fontWeight: 700 }}>
+                          {hasActiveFilters
+                            ? "No sessions match the current filters."
+                            : "No completed sessions yet."}
+                        </Typography>
+                        <Typography color="text.secondary" sx={{ textAlign: "center" }}>
+                          {hasActiveFilters
+                            ? "Try another status/search combination or clear filters."
+                            : "Completed Fellow sessions will appear here once they are uploaded."}
+                        </Typography>
+                        {hasActiveFilters ? (
+                          <Link href="/dashboard" style={{ textDecoration: "none" }}>
+                            <Button variant="outlined" size="small">
+                              Clear filters
+                            </Button>
+                          </Link>
+                        ) : null}
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  sessions.map((session) => {
+                    const action = actionStyles(session.displayStatus);
+                    return (
+                      <TableRow key={session.id} hover>
+                        <TableCell>
+                          <Stack spacing={0.25}>
+                            <Typography sx={{ fontWeight: 700 }}>{session.fellowName}</Typography>
+                          </Stack>
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: "nowrap" }}>
+                          {formatDate(session.occurredAt)}
+                        </TableCell>
+                        <TableCell>{session.groupId}</TableCell>
+                        <TableCell>
+                          <SessionStatusChip status={session.displayStatus} />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Link
+                            href={`/sessions/${session.id}`}
+                            style={{ textDecoration: "none", display: "inline-block" }}
                           >
-                            {action.label}
-                          </Button>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                            <Button
+                              variant={action.variant}
+                              sx={{
+                                minWidth: 96,
+                                fontWeight: 800,
+                                ...action.sx
+                              }}
+                            >
+                              {action.label}
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
               </TableBody>
             </Table>
           </Box>
 
           <Stack spacing={1.5} sx={{ display: { xs: "flex", md: "none" } }}>
-            {sessions.map((session) => {
-              const action = actionStyles(session.displayStatus);
-              const actionButton = (
-                <Button variant={action.variant} fullWidth sx={{ fontWeight: 800, ...action.sx }}>
-                  {action.label}
-                </Button>
-              );
-
-              return (
-                <Card
-                  key={session.id}
-                  sx={{ borderRadius: 2, borderColor: "divider", backgroundColor: "common.white" }}
-                >
-                  <CardContent sx={{ p: 1.75 }}>
-                    <Stack spacing={1.5}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                        <Stack spacing={0.25}>
-                          <Typography sx={{ fontWeight: 800 }}>{session.fellowName}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Fellow
-                          </Typography>
-                        </Stack>
-                        <SessionStatusChip status={session.displayStatus} />
-                      </Stack>
-
-                      <Stack direction="row" spacing={3}>
-                        <Box>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              textTransform: "uppercase",
-                              color: "text.disabled",
-                              fontWeight: 800
-                            }}
-                          >
-                            Date
-                          </Typography>
-                          <Typography sx={{ fontWeight: 700 }}>
-                            {formatDateMobile(session.occurredAt)}
-                          </Typography>
-                        </Box>
-                        <Box>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              textTransform: "uppercase",
-                              color: "text.disabled",
-                              fontWeight: 800
-                            }}
-                          >
-                            Group ID
-                          </Typography>
-                          <Typography sx={{ fontWeight: 700 }}>{session.groupId}</Typography>
-                        </Box>
-                      </Stack>
-
-                      <Link
-                        href={`/sessions/${session.id}`}
-                        style={{ textDecoration: "none", display: "inline-block", width: "100%" }}
-                      >
-                        {actionButton}
+            {sessions.length === 0 ? (
+              <Card
+                sx={{ borderRadius: 2, borderColor: "divider", backgroundColor: "common.white" }}
+              >
+                <CardContent sx={{ p: 2 }}>
+                  <Stack spacing={1.25} alignItems="center">
+                    <Typography sx={{ fontWeight: 700, textAlign: "center" }}>
+                      {hasActiveFilters
+                        ? "No sessions match the current filters."
+                        : "No completed sessions yet."}
+                    </Typography>
+                    <Typography color="text.secondary" sx={{ textAlign: "center" }}>
+                      {hasActiveFilters
+                        ? "Try another status/search combination or clear filters."
+                        : "Completed Fellow sessions will appear here once they are uploaded."}
+                    </Typography>
+                    {hasActiveFilters ? (
+                      <Link href="/dashboard" style={{ textDecoration: "none" }}>
+                        <Button variant="outlined" size="small">
+                          Clear filters
+                        </Button>
                       </Link>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    ) : null}
+                  </Stack>
+                </CardContent>
+              </Card>
+            ) : (
+              sessions.map((session) => {
+                const action = actionStyles(session.displayStatus);
+                const actionButton = (
+                  <Button variant={action.variant} fullWidth sx={{ fontWeight: 800, ...action.sx }}>
+                    {action.label}
+                  </Button>
+                );
+
+                return (
+                  <Card
+                    key={session.id}
+                    sx={{
+                      borderRadius: 2,
+                      borderColor: "divider",
+                      backgroundColor: "common.white"
+                    }}
+                  >
+                    <CardContent sx={{ p: 1.75 }}>
+                      <Stack spacing={1.5}>
+                        <Stack
+                          direction="row"
+                          justifyContent="space-between"
+                          alignItems="flex-start"
+                        >
+                          <Stack spacing={0.25}>
+                            <Typography sx={{ fontWeight: 800 }}>{session.fellowName}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Fellow
+                            </Typography>
+                          </Stack>
+                          <SessionStatusChip status={session.displayStatus} />
+                        </Stack>
+
+                        <Stack direction="row" spacing={3}>
+                          <Box>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                textTransform: "uppercase",
+                                color: "text.disabled",
+                                fontWeight: 800
+                              }}
+                            >
+                              Date
+                            </Typography>
+                            <Typography sx={{ fontWeight: 700 }}>
+                              {formatDateMobile(session.occurredAt)}
+                            </Typography>
+                          </Box>
+                          <Box>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                textTransform: "uppercase",
+                                color: "text.disabled",
+                                fontWeight: 800
+                              }}
+                            >
+                              Group ID
+                            </Typography>
+                            <Typography sx={{ fontWeight: 700 }}>{session.groupId}</Typography>
+                          </Box>
+                        </Stack>
+
+                        <Link
+                          href={`/sessions/${session.id}`}
+                          style={{ textDecoration: "none", display: "inline-block", width: "100%" }}
+                        >
+                          {actionButton}
+                        </Link>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
           </Stack>
 
-          <Stack spacing={1} alignItems="center">
-            <Pagination
-              count={totalPages}
-              page={page}
-              color="primary"
-              shape="rounded"
-              siblingCount={1}
-              boundaryCount={1}
-              size="small"
-              renderItem={(item) => {
-                const targetPage = item.page ?? 1;
-                // Use anchor navigation so pagination stays server-rendered and URL-driven.
-                return (
-                  <PaginationItem
-                    {...item}
-                    component="a"
-                    href={buildPageHref(targetPage, query, status)}
-                  />
-                );
-              }}
-            />
-            <Typography variant="caption" color="text.secondary">
-              Showing {sessions.length} of {totalCount} sessions
-            </Typography>
-          </Stack>
+          {totalCount > 0 ? (
+            <Stack spacing={1} alignItems="center">
+              <Pagination
+                count={totalPages}
+                page={page}
+                color="primary"
+                shape="rounded"
+                siblingCount={1}
+                boundaryCount={1}
+                size="small"
+                renderItem={(item) => {
+                  const targetPage = item.page ?? 1;
+                  // Use anchor navigation so pagination stays server-rendered and URL-driven.
+                  return (
+                    <PaginationItem
+                      {...item}
+                      component="a"
+                      href={buildPageHref(targetPage, query, status)}
+                    />
+                  );
+                }}
+              />
+              <Typography variant="caption" color="text.secondary">
+                Showing {sessions.length} of {totalCount} sessions
+              </Typography>
+            </Stack>
+          ) : null}
         </Stack>
       </CardContent>
     </Card>

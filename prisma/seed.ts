@@ -72,7 +72,8 @@ interface SessionScenario {
 
 const DEMO_SUPERVISOR_EMAIL = "supervisor@shamiri.demo";
 const DEMO_SUPERVISOR_PASSWORD = "Password123!";
-const SHOULD_SEED_REFERENCE_ANALYSIS = process.env.SEED_REFERENCE_ANALYSIS !== "false";
+const SHOULD_SEED_REFERENCE_ANALYSIS = process.env.SEED_REFERENCE_ANALYSIS === "true";
+const SHOULD_SEED_SUPERVISOR_REVIEWS = process.env.SEED_SUPERVISOR_REVIEWS === "true";
 
 const fellowNames = [
   "John Mutua",
@@ -92,7 +93,7 @@ const sessionScenarios: SessionScenario[] = [
     id: "session-strong-01",
     kind: "STRONG_COMPLETE",
     durationMinutes: 46,
-    finalStatus: SessionStatus.PROCESSED,
+    finalStatus: null,
     seedReferenceAnalysis: true
   },
   {
@@ -128,7 +129,7 @@ const sessionScenarios: SessionScenario[] = [
     id: "session-partial-02",
     kind: "PARTIAL_COVERAGE",
     durationMinutes: 50,
-    finalStatus: SessionStatus.PROCESSED,
+    finalStatus: null,
     seedReferenceAnalysis: true
   },
   {
@@ -157,7 +158,7 @@ const sessionScenarios: SessionScenario[] = [
     id: "session-drift-02",
     kind: "PROTOCOL_DRIFT",
     durationMinutes: 49,
-    finalStatus: SessionStatus.PROCESSED,
+    finalStatus: null,
     seedReferenceAnalysis: true
   },
   {
@@ -843,7 +844,9 @@ async function main() {
             .millisecond(0)
             .toDate(),
           transcriptText,
-          finalStatus: scenario.finalStatus ?? undefined
+          finalStatus: SHOULD_SEED_SUPERVISOR_REVIEWS
+            ? (scenario.finalStatus ?? undefined)
+            : undefined
         }
       });
     })
@@ -878,33 +881,37 @@ async function main() {
     );
   }
 
-  const reviewSeedInput = sessionScenarios
-    .map((scenario, index) => ({
-      scenario,
-      sessionId: createdSessions[index]?.id
-    }))
-    .filter(
-      (
-        row
-      ): row is {
-        scenario: SessionScenario & { review: NonNullable<SessionScenario["review"]> };
-        sessionId: string;
-      } => Boolean(row.sessionId && row.scenario.review)
-    );
+  const reviewSeedInput = SHOULD_SEED_SUPERVISOR_REVIEWS
+    ? sessionScenarios
+        .map((scenario, index) => ({
+          scenario,
+          sessionId: createdSessions[index]?.id
+        }))
+        .filter(
+          (
+            row
+          ): row is {
+            scenario: SessionScenario & { review: NonNullable<SessionScenario["review"]> };
+            sessionId: string;
+          } => Boolean(row.sessionId && row.scenario.review)
+        )
+    : [];
 
-  await Promise.all(
-    reviewSeedInput.map((row) =>
-      prisma.supervisorReview.create({
-        data: {
-          sessionId: row.sessionId,
-          supervisorId: supervisor.id,
-          decision: row.scenario.review.decision,
-          finalStatus: row.scenario.finalStatus ?? SessionStatus.PROCESSED,
-          note: row.scenario.review.note
-        }
-      })
-    )
-  );
+  if (SHOULD_SEED_SUPERVISOR_REVIEWS) {
+    await Promise.all(
+      reviewSeedInput.map((row) =>
+        prisma.supervisorReview.create({
+          data: {
+            sessionId: row.sessionId,
+            supervisorId: supervisor.id,
+            decision: row.scenario.review.decision,
+            finalStatus: row.scenario.finalStatus ?? SessionStatus.SAFE,
+            note: row.scenario.review.note
+          }
+        })
+      )
+    );
+  }
 
   console.log("Seed complete ✅");
   console.log("Supervisor:", {
@@ -916,6 +923,10 @@ async function main() {
   console.log(
     "Reference analyses created:",
     SHOULD_SEED_REFERENCE_ANALYSIS ? "enabled" : "disabled"
+  );
+  console.log(
+    "Supervisor reviews and final statuses created:",
+    SHOULD_SEED_SUPERVISOR_REVIEWS ? "enabled" : "disabled"
   );
   console.log("Reviews created:", reviewSeedInput.length);
 }

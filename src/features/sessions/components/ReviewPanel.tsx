@@ -15,7 +15,7 @@ import {
   Typography
 } from "@mui/material";
 import type { SessionDetailDTO } from "@/features/sessions/types";
-import type { ReviewDecision, SessionStatus } from "@/server/types/domain";
+import type { FinalReviewStatus, ReviewDecision, SessionStatus } from "@/server/types/domain";
 
 interface ReviewPanelProps {
   sessionId: string;
@@ -24,7 +24,7 @@ interface ReviewPanelProps {
   existingReview?: SessionDetailDTO["review"];
 }
 
-const ALL_STATUS_OPTIONS: SessionStatus[] = ["PROCESSED", "SAFE", "FLAGGED_FOR_REVIEW", "RISK"];
+const FINAL_STATUS_OPTIONS: FinalReviewStatus[] = ["SAFE", "FLAGGED_FOR_REVIEW", "RISK"];
 
 function normalizeReviewDecision(
   decision: ReviewDecision | undefined,
@@ -42,6 +42,30 @@ function normalizeReviewDecision(
   return decision;
 }
 
+function normalizeFinalStatus(
+  existingFinalStatus: SessionStatus | undefined,
+  currentStatus: SessionStatus
+): FinalReviewStatus {
+  if (
+    existingFinalStatus === "SAFE" ||
+    existingFinalStatus === "FLAGGED_FOR_REVIEW" ||
+    existingFinalStatus === "RISK"
+  ) {
+    return existingFinalStatus;
+  }
+
+  if (
+    currentStatus === "SAFE" ||
+    currentStatus === "FLAGGED_FOR_REVIEW" ||
+    currentStatus === "RISK"
+  ) {
+    return currentStatus;
+  }
+
+  // When no AI/review signal exists yet, default to SAFE and let supervisors adjust explicitly.
+  return "SAFE";
+}
+
 export function ReviewPanel({
   sessionId,
   currentStatus,
@@ -53,8 +77,8 @@ export function ReviewPanel({
   const [decision, setDecision] = useState<ReviewDecision>(
     normalizeReviewDecision(existingReview?.decision, hasAnalysis)
   );
-  const [finalStatus, setFinalStatus] = useState<SessionStatus>(
-    existingReview?.finalStatus ?? currentStatus
+  const [finalStatus, setFinalStatus] = useState<FinalReviewStatus>(
+    normalizeFinalStatus(existingReview?.finalStatus, currentStatus)
   );
   const [note, setNote] = useState(existingReview?.note ?? "");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -70,10 +94,7 @@ export function ReviewPanel({
         { value: "OVERRIDDEN", label: "Override AI Status" }
       ]
     : [{ value: "OVERRIDDEN", label: "Set Final Status Manually" }];
-  const statusOptions = useMemo(() => {
-    const ordered = [currentStatus, ...ALL_STATUS_OPTIONS];
-    return Array.from(new Set(ordered));
-  }, [currentStatus]);
+  const statusOptions = useMemo(() => FINAL_STATUS_OPTIONS, []);
 
   const handleSubmit = (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -161,7 +182,7 @@ export function ReviewPanel({
             label={hasAnalysis ? "Override AI Status" : "Set Final Status"}
             value={finalStatus}
             onChange={(event) => {
-              setFinalStatus(event.target.value as SessionStatus);
+              setFinalStatus(event.target.value as FinalReviewStatus);
             }}
             size="small"
           >

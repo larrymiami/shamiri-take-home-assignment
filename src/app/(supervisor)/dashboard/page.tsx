@@ -3,7 +3,6 @@ import Groups2OutlinedIcon from "@mui/icons-material/Groups2Outlined";
 import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import { Grid } from "@mui/material";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { MetricCard } from "@/features/dashboard/components/MetricCard";
 import { SessionsTable } from "@/features/sessions/components/SessionsTable";
 import {
@@ -41,6 +40,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     countForSupervisor(session.user.id),
     getSessionMetricsForSupervisor(session.user.id)
   ]);
+  const reviewedTodaySubtitle =
+    metrics.todayTotal === 0
+      ? "No sessions recorded today"
+      : `${metrics.reviewedToday} of ${metrics.todayTotal} sessions reviewed today`;
 
   return (
     <>
@@ -62,9 +65,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <MetricCard
-            title="Processed Today"
+            title="Review Progress Today"
             value={`${metrics.reviewedToday} / ${metrics.todayTotal}`}
-            subtitle={`${metrics.reviewedToday} reviewed · ${metrics.todayTotal} total`}
+            subtitle={reviewedTodaySubtitle}
             icon={<TaskAltOutlinedIcon sx={{ color: "text.disabled", fontSize: 24 }} />}
           />
         </Grid>
@@ -77,21 +80,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </Grid>
       </Grid>
 
-      {sessionList.totalCount === 0 ? (
-        <EmptyState
-          title="No completed sessions yet"
-          description="Completed Fellow sessions will appear here once they are uploaded."
-        />
-      ) : (
-        <SessionsTable
-          sessions={sessionList.items}
-          page={sessionList.page}
-          pageSize={sessionList.pageSize}
-          totalCount={sessionList.totalCount}
-          query={search}
-          status={status}
-        />
-      )}
+      <SessionsTable
+        sessions={sessionList.items}
+        page={sessionList.page}
+        pageSize={sessionList.pageSize}
+        totalCount={sessionList.totalCount}
+        query={search}
+        status={status}
+      />
     </>
   );
 }

@@ -1,4 +1,4 @@
-import type { ReviewDecision, SessionStatus } from "@/server/types/domain";
+import type { FinalReviewStatus, ReviewDecision, SessionStatus } from "@/server/types/domain";
 
 export interface SessionListItem {
   id: string;
@@ -82,6 +82,6 @@ export interface SessionDetailDTO {
 
 export interface SupervisorReviewInput {
   decision: ReviewDecision;
-  finalStatus: SessionStatus;
+  finalStatus: FinalReviewStatus;
   note: string;
 }

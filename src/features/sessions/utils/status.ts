@@ -28,8 +28,9 @@ export function deriveSessionDisplayStatusFromSafetyFlag({
   analysisSafetyFlag,
   analysisRequiresSupervisorReview
 }: DeriveSessionStatusFromSafetyFlagInput): SessionStatus {
-  // Human review is canonical. AI flag is a fallback only when no final status exists.
-  if (finalStatus) {
+  // Human review is canonical for explicit decision outcomes.
+  // Legacy `PROCESSED` should be treated as "pending review", not a final outcome.
+  if (finalStatus && finalStatus !== "PROCESSED") {
     return finalStatus;
   }
 
