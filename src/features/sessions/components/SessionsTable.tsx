@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import { useEffect, useState } from "react";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import {
@@ -26,6 +27,8 @@ import type { SessionStatus } from "@/server/types/domain";
 import type { SessionListItem, SessionStatusFilter } from "@/features/sessions/types";
 import { SessionStatusChip } from "@/features/sessions/components/SessionStatusChip";
 
+dayjs.extend(utc);
+
 interface SessionsTableProps {
   sessions: SessionListItem[];
   page: number;
@@ -36,11 +39,11 @@ interface SessionsTableProps {
 }
 
 function formatDate(occurredAtIso: string): string {
-  return dayjs(occurredAtIso).format("MMM D, YYYY h:mm A");
+  return dayjs.utc(occurredAtIso).format("MMM D, YYYY h:mm A");
 }
 
 function formatDateMobile(occurredAtIso: string): string {
-  return dayjs(occurredAtIso).format("MMM D, YYYY");
+  return dayjs.utc(occurredAtIso).format("MMM D, YYYY");
 }
 
 function actionStyles(status: SessionStatus) {
