@@ -70,7 +70,11 @@ export async function listForSupervisor(
   const safePageSize = Math.max(1, query.pageSize);
   const offset = (safePage - 1) * safePageSize;
   const searchTerm = query.search.trim();
-  const searchPattern = `%${searchTerm}%`;
+  const escapedSearchTerm = searchTerm
+    .replaceAll("\\", "\\\\")
+    .replaceAll("%", "\\%")
+    .replaceAll("_", "\\_");
+  const searchPattern = `%${escapedSearchTerm}%`;
   const statusFilter = query.status;
 
   const countRows = await prisma.$queryRaw<Array<{ count: number }>>`
@@ -90,8 +94,8 @@ WITH base AS (
   WHERE s."supervisorId" = ${supervisorId}
     AND (
       ${searchTerm} = ''
-      OR s."groupId" ILIKE ${searchPattern}
-      OR f."name" ILIKE ${searchPattern}
+      OR s."groupId" ILIKE ${searchPattern} ESCAPE '\'
+      OR f."name" ILIKE ${searchPattern} ESCAPE '\'
     )
 )
 SELECT COUNT(*)::int AS "count"
@@ -130,8 +134,8 @@ WITH base AS (
   WHERE s."supervisorId" = ${supervisorId}
     AND (
       ${searchTerm} = ''
-      OR s."groupId" ILIKE ${searchPattern}
-      OR f."name" ILIKE ${searchPattern}
+      OR s."groupId" ILIKE ${searchPattern} ESCAPE '\'
+      OR f."name" ILIKE ${searchPattern} ESCAPE '\'
     )
 )
 SELECT
