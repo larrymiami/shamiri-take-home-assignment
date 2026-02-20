@@ -105,7 +105,7 @@ export function SessionStatusChip({
         label={statusLabel[status]}
         sx={{
           backgroundColor: "warning.main",
-          color: "common.white",
+          color: "text.primary",
           ...baseSx
         }}
       />
@@ -120,8 +120,8 @@ export function SessionStatusChip({
         icon={<Icon fontSize="small" />}
         label={statusLabel[status]}
         sx={{
-          borderColor: "var(--shamiri-border-green)",
-          color: "success.main",
+          borderColor: "var(--shamiri-border-green-strong)",
+          color: "var(--shamiri-text-green-strong)",
           backgroundColor: "var(--shamiri-light-green)",
           ...baseSx
         }}
@@ -138,7 +138,7 @@ export function SessionStatusChip({
       sx={{
         borderColor: "divider",
         backgroundColor: "var(--shamiri-background-secondary)",
-        color: "text.secondary",
+        color: "text.primary",
         ...baseSx
       }}
     />

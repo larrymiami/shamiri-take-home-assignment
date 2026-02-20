@@ -9,7 +9,10 @@ import {
   Button,
   Card,
   CardContent,
+  FormControl,
+  InputLabel,
   MenuItem,
+  Select,
   Stack,
   TextField,
   Typography
@@ -72,6 +75,12 @@ export function ReviewPanel({
   hasAnalysis = false,
   existingReview
 }: ReviewPanelProps) {
+  const sessionIdSafe = sessionId.replace(/[^a-zA-Z0-9_-]/g, "-");
+  const decisionLabelId = `review-decision-label-${sessionIdSafe}`;
+  const decisionFieldId = `review-decision-${sessionIdSafe}`;
+  const finalStatusLabelId = `review-final-status-label-${sessionIdSafe}`;
+  const finalStatusFieldId = `review-final-status-${sessionIdSafe}`;
+  const noteFieldId = `review-note-${sessionIdSafe}`;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [decision, setDecision] = useState<ReviewDecision>(
@@ -156,22 +165,27 @@ export function ReviewPanel({
             </Typography>
           </Stack>
 
-          <TextField
-            select
-            label="Decision"
-            value={decision}
-            onChange={(event) => {
-              const nextDecision = event.target.value as ReviewDecision;
-              setDecision(nextDecision);
-            }}
-            size="small"
-          >
-            {decisionOptions.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </TextField>
+          <FormControl fullWidth size="small">
+            <InputLabel id={decisionLabelId}>Decision</InputLabel>
+            <Select
+              id={decisionFieldId}
+              name="decision"
+              labelId={decisionLabelId}
+              label="Decision"
+              value={decision}
+              onChange={(event) => {
+                const nextDecision = event.target.value as ReviewDecision;
+                setDecision(nextDecision);
+              }}
+              inputProps={{ "aria-label": "Supervisor review decision" }}
+            >
+              {decisionOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           {!hasAnalysis ? (
             <Alert severity="info" sx={{ borderRadius: 2 }}>
@@ -180,27 +194,38 @@ export function ReviewPanel({
             </Alert>
           ) : null}
 
-          <TextField
-            select
-            label={hasAnalysis ? "Override AI Status" : "Set Final Status"}
-            value={finalStatus}
-            onChange={(event) => {
-              setFinalStatus(event.target.value as FinalReviewStatus);
-            }}
-            size="small"
-          >
-            {statusOptions.map((status) => (
-              <MenuItem key={status} value={status}>
-                {status === currentStatus
-                  ? hasAnalysis
-                    ? `Maintain AI Recommendation (${status})`
-                    : `Maintain Current Status (${status})`
-                  : status}
-              </MenuItem>
-            ))}
-          </TextField>
+          <FormControl fullWidth size="small">
+            <InputLabel id={finalStatusLabelId}>
+              {hasAnalysis ? "Override AI Status" : "Set Final Status"}
+            </InputLabel>
+            <Select
+              id={finalStatusFieldId}
+              name="finalStatus"
+              labelId={finalStatusLabelId}
+              label={hasAnalysis ? "Override AI Status" : "Set Final Status"}
+              value={finalStatus}
+              onChange={(event) => {
+                setFinalStatus(event.target.value as FinalReviewStatus);
+              }}
+              inputProps={{
+                "aria-label": hasAnalysis ? "Override AI status" : "Set final status manually"
+              }}
+            >
+              {statusOptions.map((status) => (
+                <MenuItem key={status} value={status}>
+                  {status === currentStatus
+                    ? hasAnalysis
+                      ? `Maintain AI Recommendation (${status})`
+                      : `Maintain Current Status (${status})`
+                    : status}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           <TextField
+            id={noteFieldId}
+            name="note"
             multiline
             minRows={4}
             label="Supervisor Note"
@@ -210,6 +235,11 @@ export function ReviewPanel({
               setNote(event.target.value);
             }}
             required={requiresNote}
+            slotProps={{
+              htmlInput: {
+                "aria-label": "Supervisor note"
+              }
+            }}
             helperText={
               requiresNote ? "Required for rejected or overridden decisions." : "Optional note."
             }

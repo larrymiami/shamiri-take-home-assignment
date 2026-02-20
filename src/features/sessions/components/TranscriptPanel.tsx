@@ -124,7 +124,7 @@ function speakerBadgeStyles(speaker: TranscriptEntry["speaker"]) {
   if (speaker === "STUDENT") {
     return {
       backgroundColor: "warning.main",
-      color: "common.white"
+      color: "primary.main"
     };
   }
 
@@ -170,7 +170,10 @@ function buildTranscriptCsv(entries: TranscriptEntry[]): string {
 
 export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: TranscriptPanelProps) {
   const theme = useTheme();
-  const isDesktopViewport = useMediaQuery(theme.breakpoints.up("md"), { noSsr: true });
+  const isDesktopViewport = useMediaQuery(theme.breakpoints.up("md"), {
+    defaultMatches: false,
+    noSsr: false
+  });
   const entries = buildTranscriptEntries(transcriptText, highlightedQuotes);
   const csvContent = buildTranscriptCsv(entries);
   const downloadHref = `data:text/csv;charset=utf-8,${encodeURIComponent(csvContent)}`;
@@ -218,7 +221,7 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
                 width: { xs: 52, md: 54 },
                 minWidth: { xs: 52, md: 54 },
                 pt: 0.2,
-                color: entry.highlighted ? "error.main" : "text.disabled"
+                color: entry.highlighted ? "error.main" : "text.secondary"
               }}
             >
               <Typography
@@ -227,7 +230,7 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
                   fontWeight: 800,
                   color: "inherit",
                   letterSpacing: 0.35,
-                  fontSize: { xs: 10.5, md: 10.5 }
+                  fontSize: { xs: 12, md: 12 }
                 }}
               >
                 {entry.timestampLabel}
@@ -244,7 +247,7 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
                   py: 0.3,
                   borderRadius: 999,
                   mb: 0.35,
-                  fontSize: { xs: 9.5, md: 10 },
+                  fontSize: { xs: 12, md: 12 },
                   fontWeight: 800,
                   textTransform: "uppercase",
                   letterSpacing: 0.25,
@@ -287,6 +290,7 @@ export function TranscriptPanel({ transcriptText, highlightedQuotes = [] }: Tran
           <Stack direction="row" spacing={0.8} alignItems="center">
             <SubjectRoundedIcon sx={{ color: "primary.main", fontSize: { xs: 16, md: 17 } }} />
             <Typography
+              component="h2"
               sx={{ fontWeight: 800, fontSize: { xs: 16, md: 17 }, color: "primary.main" }}
             >
               Full Transcript

@@ -22,6 +22,8 @@ const shamiri = {
   success: "#00ba34",
   successBg: "#e5f8eb",
   successBorder: "#ccf1d6",
+  successTextStrong: "#0f5f2a",
+  successBorderStrong: "#9fd9b0",
 
   danger: "#e92c2c",
   dangerBg: "rgba(233, 44, 44, 0.12)",
@@ -122,6 +124,8 @@ const theme = createTheme({
           "--shamiri-brand-lighter-blue": shamiri.brandLighterBlue,
           "--shamiri-light-green": shamiri.successBg,
           "--shamiri-border-green": shamiri.successBorder,
+          "--shamiri-border-green-strong": shamiri.successBorderStrong,
+          "--shamiri-text-green-strong": shamiri.successTextStrong,
           "--shamiri-red-bg": shamiri.dangerBg,
           "--shamiri-red-border": shamiri.dangerBorder
         },
@@ -225,10 +229,22 @@ const theme = createTheme({
           }
         },
         input: {
-          color: shamiri.textPrimary
+          color: shamiri.textPrimary,
+          "&::placeholder": {
+            color: shamiri.textSecondary,
+            opacity: 1
+          }
         },
         notchedOutline: {
           borderColor: shamiri.border
+        }
+      }
+    },
+
+    MuiSelect: {
+      styleOverrides: {
+        select: {
+          color: shamiri.textPrimary
         }
       }
     },
