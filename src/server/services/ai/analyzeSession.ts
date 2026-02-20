@@ -7,6 +7,7 @@ import {
 } from "@/server/services/ai/prompts";
 import {
   SessionAnalysisLLMOutputJSONSchema,
+  type SessionAnalysisLLMOutput,
   SessionAnalysisLLMOutputSchema,
   SessionAnalysisSchema,
   type SessionAnalysisDTO
@@ -62,6 +63,19 @@ function extractHighConcernQuotes(transcriptText: string): string[] {
   return matches;
 }
 
+function shouldRequireSupervisorReviewFromRubric(llmOutput: SessionAnalysisLLMOutput): boolean {
+  const scores = [
+    llmOutput.contentCoverage.score,
+    llmOutput.facilitationQuality.score,
+    llmOutput.protocolSafety.score
+  ];
+  const hasCriticalRubricFailure = scores.some((score) => score === 1);
+  const hasProtocolDriftOrViolation = llmOutput.protocolSafety.score <= 2;
+  const hasBroadPartialPerformance = scores.filter((score) => score <= 2).length >= 2;
+
+  return hasCriticalRubricFailure || hasProtocolDriftOrViolation || hasBroadPartialPerformance;
+}
+
 export async function analyzeSession(transcriptText: string): Promise<SessionAnalysisDTO> {
   const startedAt = Date.now();
   const {
@@ -111,6 +125,7 @@ export async function analyzeSession(transcriptText: string): Promise<SessionAna
       const highConcernQuotes = extractHighConcernQuotes(transcriptText);
       const shouldForceRisk =
         llmOutput.riskDetection.flag === "SAFE" && highConcernQuotes.length > 0;
+      const rubricRequiresSupervisorReview = shouldRequireSupervisorReviewFromRubric(llmOutput);
       const normalizedRiskDetection = shouldForceRisk
         ? {
             flag: "RISK" as const,
@@ -124,7 +139,7 @@ export async function analyzeSession(transcriptText: string): Promise<SessionAna
             requiresSupervisorReview:
               llmOutput.riskDetection.flag === "RISK"
                 ? true
-                : llmOutput.riskDetection.requiresSupervisorReview
+                : llmOutput.riskDetection.requiresSupervisorReview || rubricRequiresSupervisorReview
           };
       // Final DTO validation adds server-owned metadata before persistence.
       const response = SessionAnalysisSchema.parse({
