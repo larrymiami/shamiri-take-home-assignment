@@ -219,15 +219,15 @@ export async function getSessionMetricsForSupervisor(supervisorId: string): Prom
         ]
       }
     }),
-    prisma.supervisorReview.count({
+    prisma.session.count({
       where: {
         supervisorId,
-        session: {
-          supervisorId,
-          occurredAt: {
-            gte: todayStart,
-            lt: todayEndExclusive
-          }
+        occurredAt: {
+          gte: todayStart,
+          lt: todayEndExclusive
+        },
+        review: {
+          isNot: null
         }
       }
     }),

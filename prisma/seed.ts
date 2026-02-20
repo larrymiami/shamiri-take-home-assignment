@@ -814,6 +814,7 @@ async function main() {
   });
 
   const fellows = await ensureFellowsForSupervisor(supervisor.id);
+  const seedDay = dayjs().startOf("day");
 
   await prisma.session.deleteMany({
     where: { supervisorId: supervisor.id }
@@ -836,10 +837,10 @@ async function main() {
           supervisorId: supervisor.id,
           fellowId: fellow.id,
           groupId,
-          occurredAt: dayjs()
-            .subtract(index, "day")
-            .hour(10 + (index % 4) * 2)
+          occurredAt: seedDay
+            .hour(8)
             .minute(15)
+            .add(index, "hour")
             .second(0)
             .millisecond(0)
             .toDate(),

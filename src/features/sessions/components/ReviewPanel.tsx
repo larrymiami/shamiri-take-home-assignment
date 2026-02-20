@@ -128,6 +128,9 @@ export function ReviewPanel({
           return;
         }
 
+        if (!requiresNote) {
+          setNote("");
+        }
         setSuccessMessage("Review saved successfully.");
         router.refresh();
       } catch {

@@ -51,7 +51,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <MetricCard
             title="Flagged: Safety Risk"
-            value={String(metrics.riskCount).padStart(2, "0")}
+            value={String(metrics.riskCount)}
             emphasized
             icon={<WarningAmberRoundedIcon sx={{ color: "error.main", fontSize: 26 }} />}
           />
@@ -59,7 +59,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <MetricCard
             title="Sessions Needing Review"
-            value={String(metrics.sessionsNeedingReview).padStart(2, "0")}
+            value={String(metrics.sessionsNeedingReview)}
             icon={<AssignmentLateOutlinedIcon sx={{ color: "warning.main", fontSize: 24 }} />}
           />
         </Grid>
