@@ -1,4 +1,4 @@
-export const PROMPT_VERSION = "session-analysis-v4";
+export const PROMPT_VERSION = "session-analysis-v5";
 export const SESSION_ANALYSIS_MODEL = "gpt-4o-mini";
 
 const MAX_TRANSCRIPT_CHARS = 22000;
@@ -229,13 +229,13 @@ export function buildSessionAnalysisPrompt(transcriptText: string): {
       "- Score 3 / ADHERENT: Stayed within curriculum scope and handled sensitive moments safely.",
       "- Score 2 / MINOR_DRIFT: Brief drift off protocol/topic, then corrected course.",
       "- Score 1 / VIOLATION: Significant boundary violation, unsafe handling, or major off-protocol guidance.",
-      "RiskDetection decision policy (high-precision threshold):",
-      "- Set flag = RISK only for clear, current, specific safety concern (explicit self-harm/suicide intent, plan, preparation, ongoing abuse/immediate danger, or inability to stay safe now).",
+      "RiskDetection decision policy (safety-first escalation threshold):",
+      "- Set flag = RISK for clear, current, first-person safety concern, including explicit self-harm/suicide language OR personally-endorsed statements like wanting to disappear, not wake up, or wishing not to be around.",
       "- Do NOT set RISK for general stress/sadness/burnout/frustration without explicit safety intent.",
       "- Do NOT set RISK for hypothetical or educational examples, role-play, idioms, or normal Growth Mindset discussions about failure/hard times.",
       "- Do NOT set RISK for historical mentions that are clearly not current and not escalating now.",
       "- Prioritize first-person, present-tense, personally endorsed statements.",
-      "- If evidence is ambiguous but concerning, set flag = SAFE and requiresSupervisorReview = true.",
+      "- If evidence is ambiguous but concerning, set flag = SAFE and requiresSupervisorReview = true (triage required).",
       "- Use requiresSupervisorReview = true for borderline safety concerns that do not meet RISK threshold but should be triaged by a supervisor.",
       "- Use requiresSupervisorReview = false only when there is no meaningful safety concern requiring manual triage.",
       "- If riskDetection.flag is RISK, include 1-3 exact quotes that directly justify the threshold.",
