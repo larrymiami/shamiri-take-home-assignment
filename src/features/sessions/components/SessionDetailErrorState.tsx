@@ -64,7 +64,7 @@ export function SessionDetailErrorState({ message, onRetry }: SessionDetailError
                 <Typography sx={{ fontWeight: 800, color: "primary.main" }}>
                   Full Transcript
                 </Typography>
-                <Typography color="text.disabled" variant="body2">
+                <Typography color="text.secondary" variant="body2">
                   unavailable
                 </Typography>
               </Stack>

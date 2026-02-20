@@ -58,11 +58,11 @@ function SessionHeaderBlock({ header }: { header: HeaderData }) {
         </Stack>
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
           <Typography sx={{ fontWeight: 700 }}>{header.fellowName}</Typography>
-          <Typography color="text.disabled">•</Typography>
+          <Typography color="text.secondary">•</Typography>
           <Typography color="text.secondary">
             {dayjs(header.occurredAt).format("MMM D, YYYY")}
           </Typography>
-          <Typography color="text.disabled">•</Typography>
+          <Typography color="text.secondary">•</Typography>
           <Typography
             sx={{
               px: 1,
@@ -103,9 +103,9 @@ function SessionMetaChipsBlock({ transcriptText }: { transcriptText: string }) {
         sx={{
           fontWeight: 700,
           backgroundColor: "var(--shamiri-light-green)",
-          color: "success.main",
+          color: "var(--shamiri-text-green-strong)",
           border: "1px solid",
-          borderColor: "var(--shamiri-border-green)"
+          borderColor: "var(--shamiri-border-green-strong)"
         }}
       />
     </Stack>
@@ -312,9 +312,14 @@ async function InsightsSection({
         existingReview={insights.review}
       />
       <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ alignSelf: "flex-start", px: 0.5 }}
+        variant="body2"
+        sx={{
+          alignSelf: "flex-start",
+          px: 0.5,
+          color: "text.primary",
+          opacity: 0.74,
+          fontSize: 12.5
+        }}
       >
         Review and override controls stay in one place while you scroll.
       </Typography>

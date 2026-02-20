@@ -38,6 +38,18 @@ interface SessionsTableProps {
   status: SessionStatusFilter;
 }
 
+const visuallyHiddenSx = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  p: 0,
+  m: -1,
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap",
+  border: 0
+} as const;
+
 function formatDate(occurredAtIso: string): string {
   return dayjs.utc(occurredAtIso).format("MMM D, YYYY h:mm A");
 }
@@ -52,9 +64,9 @@ function actionStyles(status: SessionStatus) {
       variant: "contained" as const,
       label: "Review",
       sx: {
-        backgroundColor: "secondary.main",
+        backgroundColor: "primary.main",
         color: "common.white",
-        "&:hover": { backgroundColor: "secondary.dark" }
+        "&:hover": { backgroundColor: "primary.dark" }
       }
     };
   }
@@ -64,12 +76,12 @@ function actionStyles(status: SessionStatus) {
       variant: "outlined" as const,
       label: "Review",
       sx: {
-        borderColor: "var(--shamiri-border-green)",
-        color: "success.main",
+        borderColor: "var(--shamiri-border-green-strong)",
+        color: "var(--shamiri-text-green-strong)",
         backgroundColor: "var(--shamiri-light-green)",
         "&:hover": {
           backgroundColor: "var(--shamiri-light-green)",
-          borderColor: "success.main"
+          borderColor: "var(--shamiri-text-green-strong)"
         }
       }
     };
@@ -81,7 +93,7 @@ function actionStyles(status: SessionStatus) {
       label: "View",
       sx: {
         borderColor: "divider",
-        color: "text.secondary",
+        color: "text.primary",
         backgroundColor: "var(--shamiri-background-secondary)",
         "&:hover": {
           borderColor: "divider",
@@ -126,6 +138,10 @@ export function SessionsTable({
   query,
   status
 }: SessionsTableProps) {
+  const queryFieldId = "dashboard-session-search";
+  const statusFieldId = "dashboard-session-status";
+  const queryLabelId = `${queryFieldId}-label`;
+  const statusLabelId = `${statusFieldId}-label`;
   const [queryInput, setQueryInput] = useState(query);
   const [statusInput, setStatusInput] = useState<SessionStatusFilter>(status);
 
@@ -151,24 +167,41 @@ export function SessionsTable({
             spacing={2}
           >
             <Box>
-              <Typography variant="h4" sx={{ fontSize: 28, fontWeight: 800, mb: 0.5 }}>
+              <Typography
+                component="h2"
+                variant="h4"
+                sx={{ fontSize: 28, fontWeight: 800, mb: 0.5 }}
+              >
                 Completed Sessions
               </Typography>
-              <Typography color="text.secondary">
+              <Typography sx={{ color: "text.primary", opacity: 0.78 }}>
                 Review completed Fellow sessions to ensure safety and protocol fidelity.
               </Typography>
             </Box>
 
             <Box component="form" action="/dashboard">
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+                <Typography
+                  id={queryLabelId}
+                  component="label"
+                  htmlFor={queryFieldId}
+                  sx={visuallyHiddenSx}
+                >
+                  Filter sessions by fellow name or group ID
+                </Typography>
                 <TextField
+                  id={queryFieldId}
                   name="q"
                   value={queryInput}
                   onChange={(event) => setQueryInput(event.target.value)}
-                  placeholder="Filter by Fellow or Group ID"
+                  placeholder="Filter by Fellow or Group ID..."
                   size="small"
                   sx={{ minWidth: { sm: 260 } }}
                   slotProps={{
+                    htmlInput: {
+                      "aria-label": "Filter sessions by fellow name or group ID",
+                      autoComplete: "off"
+                    },
                     input: {
                       startAdornment: (
                         <InputAdornment key="search-start-adornment" position="start">
@@ -178,14 +211,29 @@ export function SessionsTable({
                     }
                   }}
                 />
+                <Typography
+                  id={statusLabelId}
+                  component="label"
+                  htmlFor={statusFieldId}
+                  sx={visuallyHiddenSx}
+                >
+                  Filter sessions by status
+                </Typography>
                 <TextField
+                  id={statusFieldId}
                   name="status"
                   select
                   size="small"
                   value={statusInput}
                   onChange={(event) => setStatusInput(event.target.value as SessionStatusFilter)}
                   sx={{ minWidth: 160 }}
-                  slotProps={{ select: { displayEmpty: true } }}
+                  slotProps={{
+                    select: {
+                      displayEmpty: true,
+                      "aria-label": "Filter sessions by status",
+                      "aria-labelledby": statusLabelId
+                    }
+                  }}
                 >
                   <MenuItem value="ALL">Status: All</MenuItem>
                   <MenuItem value="RISK">Risk</MenuItem>
@@ -205,28 +253,28 @@ export function SessionsTable({
               <TableHead>
                 <TableRow>
                   <TableCell
-                    sx={{ fontWeight: 800, color: "text.secondary", textTransform: "uppercase" }}
+                    sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase" }}
                   >
                     Fellow
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 800, color: "text.secondary", textTransform: "uppercase" }}
+                    sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase" }}
                   >
                     Date
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 800, color: "text.secondary", textTransform: "uppercase" }}
+                    sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase" }}
                   >
                     Group ID
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 800, color: "text.secondary", textTransform: "uppercase" }}
+                    sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase" }}
                   >
                     Status
                   </TableCell>
                   <TableCell
                     align="right"
-                    sx={{ fontWeight: 800, color: "text.secondary", textTransform: "uppercase" }}
+                    sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase" }}
                   >
                     Action
                   </TableCell>
@@ -242,7 +290,9 @@ export function SessionsTable({
                             ? "No sessions match the current filters."
                             : "No completed sessions yet."}
                         </Typography>
-                        <Typography color="text.secondary" sx={{ textAlign: "center" }}>
+                        <Typography
+                          sx={{ color: "text.primary", opacity: 0.78, textAlign: "center" }}
+                        >
                           {hasActiveFilters
                             ? "Try another status/search combination or clear filters."
                             : "Completed Fellow sessions will appear here once they are uploaded."}
@@ -311,7 +361,7 @@ export function SessionsTable({
                         ? "No sessions match the current filters."
                         : "No completed sessions yet."}
                     </Typography>
-                    <Typography color="text.secondary" sx={{ textAlign: "center" }}>
+                    <Typography sx={{ color: "text.primary", opacity: 0.78, textAlign: "center" }}>
                       {hasActiveFilters
                         ? "Try another status/search combination or clear filters."
                         : "Completed Fellow sessions will appear here once they are uploaded."}
@@ -366,7 +416,7 @@ export function SessionsTable({
                               variant="caption"
                               sx={{
                                 textTransform: "uppercase",
-                                color: "text.disabled",
+                                color: "text.secondary",
                                 fontWeight: 800
                               }}
                             >
@@ -381,7 +431,7 @@ export function SessionsTable({
                               variant="caption"
                               sx={{
                                 textTransform: "uppercase",
-                                color: "text.disabled",
+                                color: "text.secondary",
                                 fontWeight: 800
                               }}
                             >

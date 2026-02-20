@@ -36,15 +36,15 @@ function MetricRow({ title, score, max, label, justification, evidenceQuotes }: 
               icon={<CheckCircleOutlineOutlinedIcon sx={{ fontSize: 14 }} />}
               label={`${score}/${max} ${label}`}
               sx={{
-                color: "success.main",
+                color: "var(--shamiri-text-green-strong)",
                 backgroundColor: "var(--shamiri-light-green)",
                 border: "1px solid",
-                borderColor: "var(--shamiri-border-green)",
+                borderColor: "var(--shamiri-border-green-strong)",
                 fontWeight: 700
               }}
             />
           </Stack>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: "text.primary", opacity: 0.78 }}>
             {justification}
           </Typography>
           {evidenceQuotes.length > 0 ? (
@@ -52,8 +52,8 @@ function MetricRow({ title, score, max, label, justification, evidenceQuotes }: 
               {evidenceQuotes.map((quote, index) => (
                 <Typography
                   key={`${title}-evidence-${index + 1}`}
-                  variant="caption"
-                  color="text.secondary"
+                  variant="body2"
+                  sx={{ color: "text.primary", opacity: 0.72, fontSize: 13 }}
                 >
                   &quot;{quote}&quot;
                 </Typography>

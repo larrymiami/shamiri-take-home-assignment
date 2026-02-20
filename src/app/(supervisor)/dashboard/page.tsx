@@ -2,7 +2,7 @@ import AssignmentLateOutlinedIcon from "@mui/icons-material/AssignmentLateOutlin
 import Groups2OutlinedIcon from "@mui/icons-material/Groups2Outlined";
 import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
-import { Grid } from "@mui/material";
+import { Grid, Typography } from "@mui/material";
 import { MetricCard } from "@/features/dashboard/components/MetricCard";
 import { SessionsTable } from "@/features/sessions/components/SessionsTable";
 import {
@@ -47,6 +47,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <>
+      <Typography
+        component="h1"
+        sx={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          p: 0,
+          m: -1,
+          overflow: "hidden",
+          clip: "rect(0 0 0 0)",
+          whiteSpace: "nowrap",
+          border: 0
+        }}
+      >
+        Supervisor Dashboard
+      </Typography>
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <MetricCard
@@ -68,14 +84,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             title="Review Progress Today"
             value={`${metrics.reviewedToday} / ${metrics.todayTotal}`}
             subtitle={reviewedTodaySubtitle}
-            icon={<TaskAltOutlinedIcon sx={{ color: "text.disabled", fontSize: 24 }} />}
+            icon={<TaskAltOutlinedIcon sx={{ color: "text.secondary", fontSize: 24 }} />}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <MetricCard
             title="Fellows Assigned"
             value={String(fellowsAssigned)}
-            icon={<Groups2OutlinedIcon sx={{ color: "text.disabled", fontSize: 24 }} />}
+            icon={<Groups2OutlinedIcon sx={{ color: "text.secondary", fontSize: 24 }} />}
           />
         </Grid>
       </Grid>
