@@ -3,6 +3,7 @@ import { Raleway } from "next/font/google";
 import "./globals.css";
 import { MuiThemeProvider } from "@/providers/MuiThemeProvider";
 import { AuthSessionProvider } from "@/providers/AuthSessionProvider";
+import { Analytics } from "@vercel/analytics/next";
 
 const raleway = Raleway({
   variable: "--font-raleway",
@@ -31,6 +32,7 @@ export default function RootLayout({
         <MuiThemeProvider>
           <AuthSessionProvider>{children}</AuthSessionProvider>
         </MuiThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
