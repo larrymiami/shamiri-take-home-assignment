@@ -277,8 +277,6 @@ async function InsightsSection({
     notFound();
   }
 
-  const isRisk = insights.analysis?.riskDetection.flag === "RISK";
-
   return (
     <Stack spacing={1.5}>
       <SessionInsightCard
@@ -318,9 +316,7 @@ async function InsightsSection({
         color="text.secondary"
         sx={{ alignSelf: "flex-start", px: 0.5 }}
       >
-        {isRisk
-          ? "Risk evidence stays visible while you review the transcript."
-          : "Review and override controls stay in one place while you scroll."}
+        Review and override controls stay in one place while you scroll.
       </Typography>
     </Stack>
   );
